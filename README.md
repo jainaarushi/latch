@@ -1,0 +1,3 @@
+# latch
+
+Initial repository setup.
