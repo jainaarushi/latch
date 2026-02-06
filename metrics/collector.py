@@ -1,3 +1,13 @@
+"""
+Metrics Collector
+
+Collects lightweight metrics needed for control decisions.
+
+It must NOT:
+- implement dashboards or full observability
+- export to external systems
+"""
+
 from typing import Dict
 from .rolling_stats import RollingStats
 

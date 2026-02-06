@@ -1,34 +1,44 @@
-# Startup Context
+# Startup Context (read before coding)
 
-## Problem Statement
+## What we are building
+An intent-based control layer for LLM inference systems.
 
-LLM systems break in production because traffic, prompts, and usage
-patterns change continuously. Static configurations and observability
-are insufficient to keep latency, cost, and reliability stable.
+This system sits in the request path and continuously:
+Signals -> Decisions -> Actions -> Verification
 
-## Core Insight
+Goal: keep latency/cost/reliability stable as traffic and prompts change.
 
-Production LLM systems need a real-time control layer that translates
-application intent (latency, cost, priority) into execution behavior.
-This layer must operate in the request path and close the loop via
-continuous feedback.
+## What this is NOT
+- NOT an observability product (no dashboards-first design).
+- NOT a model hosting platform.
+- NOT a GPU scheduler (llm-d does infra scheduling; we do app-level intent).
+- NOT an agent orchestration framework (we wrap agent calls but do not implement agents).
 
-## Non-Goals
+## Key boundaries
+- Decisions must be made before or during inference, not after offline logs.
+- We express customer goals as intents (latency, cost, priority, quality floor).
+- We output actions/constraints, not infrastructure-specific scheduling.
+- We integrate with infra control planes (e.g., llm-d) via a small "intent -> constraint" translation layer.
 
-- This is not an observability platform.
-- This is not a model quality or prompt engineering system.
-- This is not an infrastructure scheduler (e.g., GPU batching).
+## MVP scope (do only this)
+- Minimal intent schema
+- Policy/decision engine (rules-first)
+- Request interceptor (SDK/gateway mock)
+- Lightweight metrics signals (rolling windows)
+- Fake llm-d adapter (simulated response times/queue pressure)
+- Demo script showing stabilization under traffic spike
 
-## Relationship to Other Systems
+## Explicit non-goals for MVP
+- Auth, multi-tenant RBAC, billing
+- Full tracing stack / dashboards
+- Real GPU integration
+- RAG/vector DB/memory
+- Multi-agent planning or tool graphs
 
-- llm-d: Infra-level control plane (GPU scheduling, batching).
-  This project operates above llm-d, translating intent into constraints.
-- Monitoring tools (Datadog, etc.): Used for verification and debugging,
-  not for driving decisions.
+## Definition of success (MVP)
+A demo where:
+- baseline system degrades under load
+- with control loop enabled, latency/cost stay within target
+- decisions are logged clearly ("switched model", "capped tokens", "reduced batching")
 
-## Why This Repo Exists
-
-This repository demonstrates a reference implementation of the
-application-level control loop for LLM inference systems.
-
-The goal is correctness of architecture, not production completeness.
+Why this works: Codex sees hard boundaries, MVP scope, and non-goals.

@@ -1,3 +1,14 @@
+"""
+Fake llm-d
+
+Simulates latency, queue depth, and batching effects from an
+inference system.
+
+It must NOT:
+- call real LLMs or GPU backends
+- implement real scheduling or autoscaling
+"""
+
 from typing import Dict
 
 

@@ -38,3 +38,4 @@ User Request
 ## Goal
 
 Demonstrate closed-loop control, not model quality.
+MVP goal: demonstrate closed-loop control, not production completeness.

@@ -1,3 +1,18 @@
+"""
+Gateway/Interceptor (MVP)
+
+This is a minimal request-path wrapper.
+It calls decision_engine BEFORE invoking the model runtime.
+
+MUST:
+- attach request context (type, tier, prompt size)
+- apply actions returned by decision_engine
+
+MUST NOT:
+- handle auth, tenants, billing
+- implement distributed tracing
+"""
+
 from typing import Dict
 from .fake_llmd import FakeLLMD
 from .request_context import RequestContext

@@ -1,9 +1,14 @@
-# Contributing
+# Contributing (MVP rules)
 
-Before adding new code, ask:
+Before adding a feature, answer:
 
-1. Does this change affect decisions or execution?
-2. Does it operate in the request path?
-3. Is this control logic, not observability?
+1) Does it change decisions or enforcement in the request path?
+2) Is it required to demonstrate stabilization under load?
+3) Can it be mocked without affecting the control loop?
 
-If the answer is "no" to all three, it likely does not belong here.
+If "no" -> do not build it in MVP.
+
+Prefer:
+- deterministic rules over ML/optimization
+- fake runtimes over real GPUs
+- logs of decisions over dashboards

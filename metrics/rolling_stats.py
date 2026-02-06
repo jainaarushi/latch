@@ -1,3 +1,13 @@
+"""
+Rolling Stats
+
+Maintains small-window aggregates like p95 and moving averages.
+
+It must NOT:
+- implement long-term analytics or storage
+- depend on external observability systems
+"""
+
 from collections import deque
 from typing import Deque
 

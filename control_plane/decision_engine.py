@@ -1,14 +1,20 @@
 """
-Decision Engine
+Decision Engine (MVP)
 
-Decides WHAT should happen based on application intent and live signals.
+This module decides WHAT should happen given:
+- customer intent (latency/cost/priority/quality)
+- live signals (p95 latency, queue depth, cost rate)
 
-It must NOT:
-- perform infrastructure scheduling
-- depend on offline logs
-- contain observability or UI logic
+Outputs:
+- high-level actions: model_choice, max_tokens, context_strategy, priority_hint
 
-It outputs high-level actions and constraints only.
+MUST NOT:
+- implement observability dashboards
+- implement GPU scheduling/batching logic
+- depend on offline logs or external monitoring systems
+- implement agent orchestration frameworks
+
+Keep it rules-first and deterministic for MVP.
 """
 
 from dataclasses import dataclass
