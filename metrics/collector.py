@@ -8,7 +8,10 @@ class MetricsCollector:
 
     def record(self, outcome: Dict[str, str]) -> None:
         allowed = outcome.get("allowed", "false") == "true"
-        self.stats.record(allowed)
+        latency_ms = float(outcome.get("latency_ms", "0"))
+        cost = float(outcome.get("cost", "0"))
+        queue_depth = float(outcome.get("queue_depth", "0"))
+        self.stats.record(allowed, latency_ms, cost, queue_depth)
 
     def snapshot(self) -> dict:
         return self.stats.snapshot()

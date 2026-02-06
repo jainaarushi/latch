@@ -8,6 +8,9 @@ class Translator:
         return {
             "intent": intent.name,
             "action": decision.action,
+            "mode": decision.mode,
             "priority": str(intent.priority),
+            "max_latency_ms": str(intent.max_latency_ms),
+            "max_cost": f"{intent.max_cost:.4f}",
             "params": str(intent.params),
         }

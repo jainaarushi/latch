@@ -6,4 +6,7 @@ from typing import Dict
 class RequestContext:
     user_id: str
     trace_id: str
+    prompt_tokens: int
+    tier: str
+    is_background: bool
     metadata: Dict[str, str]

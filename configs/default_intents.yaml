@@ -1,11 +1,17 @@
 intents:
   - name: summarize
     priority: 1
+    max_latency_ms: 800
+    max_cost: 0.004
     constraints: []
   - name: classify
     priority: 2
+    max_latency_ms: 400
+    max_cost: 0.003
     constraints: []
   - name: exfiltrate
     priority: 9
+    max_latency_ms: 200
+    max_cost: 0.001
     constraints:
       - deny

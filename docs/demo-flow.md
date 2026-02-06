@@ -1,4 +1,7 @@
 # Demo Flow
 
-The demo simulates traffic and runs each request through the control loop.
-It prints decisions, runtime responses, and metrics snapshots.
+The demo simulates traffic spikes and prompt growth. It runs two passes:
+- baseline (no control)
+- with control (policy + decisions enabled)
+
+It prints outcomes, metrics snapshots, and derived signals.
