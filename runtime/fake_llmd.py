@@ -1,12 +1,20 @@
 """
-Fake llm-d
+Fake llm-d Adapter (MVP Simulation)
 
-Simulates latency, queue depth, and batching effects from an
-inference system.
+Purpose
+- Simulate an infra control plane (like llm-d) without real GPUs.
+- Accept infra_hints and produce:
+  - simulated latency
+  - simulated queue depth
+  - simulated "autoscale" events (optional)
 
-It must NOT:
-- call real LLMs or GPU backends
-- implement real scheduling or autoscaling
+Hard constraints for MVP
+- Deterministic, controllable simulation.
+- Must make the demo reproducible.
+
+Non-goals
+- Not a real llm-d integration.
+- Not a performance-accurate GPU model.
 """
 
 from typing import Dict
