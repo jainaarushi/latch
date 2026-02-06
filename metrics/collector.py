@@ -1,11 +1,24 @@
 """
-Metrics Collector
+Metrics Collector (MVP)
 
-Collects lightweight metrics needed for control decisions.
+Purpose
+- Collect minimal request-path metrics needed for control decisions.
 
-It must NOT:
-- implement dashboards or full observability
-- export to external systems
+Collect ONLY
+- latency_ms
+- tokens_in / tokens_out (can be approximate)
+- error_type (optional)
+- queue_depth (if available from runtime/fake_llmd)
+- cost_estimate (derived, optional)
+
+Hard constraints for MVP
+- In-memory only (no Prometheus, no Datadog integration).
+- No distributed tracing setup (OTel optional later).
+- Must not block the request path; collection should be O(1).
+
+Non-goals
+- Not a full observability system.
+- Not long-term storage.
 """
 
 from typing import Dict

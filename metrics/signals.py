@@ -1,3 +1,24 @@
+"""
+Signals (Metrics -> Control Signals)
+
+Purpose
+- Convert rolling metrics into small, stable "signals" that drive decisions.
+  Examples:
+  - latency_hot = True if p95_latency_ms > threshold
+  - cost_hot = True if cost_rate > threshold
+  - error_hot = True if error_rate > threshold
+  - overload = True if queue_depth > threshold
+
+Hard constraints for MVP
+- Signals must be few and interpretable (<= 10).
+- Thresholds are configurable but simple.
+- No ML anomaly detection.
+
+Non-goals
+- Not alerting or paging.
+- Not dashboard logic.
+"""
+
 from dataclasses import dataclass
 from typing import List
 

@@ -1,11 +1,20 @@
 """
-Rolling Stats
+Rolling Stats (MVP)
 
-Maintains small-window aggregates like p95 and moving averages.
+Purpose
+- Maintain rolling aggregates required by the control loop:
+  - moving average
+  - p50/p95 approximations (simple is fine)
+  - error rate over a short window
 
-It must NOT:
-- implement long-term analytics or storage
-- depend on external observability systems
+Hard constraints for MVP
+- Keep implementation simple and deterministic.
+- No external libraries needed beyond stdlib.
+- Operate on a bounded in-memory window.
+
+Non-goals
+- No heavy quantile algorithms.
+- No time-series database integration.
 """
 
 from collections import deque

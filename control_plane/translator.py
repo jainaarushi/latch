@@ -1,11 +1,29 @@
 """
-Translator
+Translator (Intent -> Infra Constraints)
 
-Converts decisions into runtime constraints for the LLM execution path.
+Purpose
+- Translate our app-level policy outputs into a small, stable contract that an infra
+  control plane (e.g., llm-d) can act on.
 
-It must NOT:
-- implement infrastructure scheduling
-- call real LLMs or external services
+Inputs
+- policy: normalized constraints from policy_engine
+- signals: optional (used only to choose between a few translation presets)
+
+Outputs
+- infra_hints: infra-facing constraints/hints, e.g.:
+  - priority: "latency" | "throughput"
+  - max_queue_depth: int
+  - batching: "low" | "auto"
+  - concurrency_cap: int
+
+Hard constraints for MVP
+- Do NOT call real llm-d APIs; provide a fake adapter elsewhere.
+- Do NOT invent deep GPU knobs; keep a minimal hint schema.
+- Translator must be pure and side-effect free.
+
+Non-goals
+- Not an SDK/gateway.
+- Not observability or tracing export.
 """
 
 from typing import Dict

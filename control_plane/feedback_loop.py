@@ -1,11 +1,28 @@
 """
-Feedback Loop
+Feedback Loop (Verification)
 
-Verifies whether execution outcomes satisfied intent constraints.
+Purpose
+- Close the loop by checking whether actions improved outcomes.
+- Adjust future decisions by updating internal state or recommending a mode change.
 
-It must NOT:
-- depend on external observability systems
-- perform long-term storage or analytics
+Inputs
+- previous_decision / previous_policy
+- new signals after action (p95 latency, errors, cost rate, queue depth)
+
+Outputs
+- feedback: small result object, e.g.:
+  - outcome: "improved" | "worse" | "no_change"
+  - recommended_mode: optional ("degraded" | "normal")
+  - notes: short reason string for logs/tests
+
+Hard constraints for MVP
+- Must be lightweight; no heavy analytics.
+- No dashboards; only structured logs/records.
+- No offline training or historical big-data jobs.
+
+Non-goals
+- Not postmortem tooling.
+- Not anomaly detection platform.
 """
 
 from typing import Dict
