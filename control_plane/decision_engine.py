@@ -1,3 +1,16 @@
+"""
+Decision Engine
+
+Decides WHAT should happen based on application intent and live signals.
+
+It must NOT:
+- perform infrastructure scheduling
+- depend on offline logs
+- contain observability or UI logic
+
+It outputs high-level actions and constraints only.
+"""
+
 from dataclasses import dataclass
 from .intents import Intent
 from .policy_engine import PolicyResult

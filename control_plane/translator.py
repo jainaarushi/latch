@@ -1,3 +1,13 @@
+"""
+Translator
+
+Converts decisions into runtime constraints for the LLM execution path.
+
+It must NOT:
+- implement infrastructure scheduling
+- call real LLMs or external services
+"""
+
 from typing import Dict
 from .decision_engine import Decision
 from .intents import Intent

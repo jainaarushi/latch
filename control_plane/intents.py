@@ -1,3 +1,13 @@
+"""
+Intent Schema
+
+Defines application intent as latency, cost, and priority constraints.
+
+It must NOT:
+- encode infrastructure scheduling logic
+- depend on runtime metrics or offline logs
+"""
+
 from dataclasses import dataclass, field
 from typing import Dict, List
 

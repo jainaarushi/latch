@@ -1,3 +1,13 @@
+"""
+Feedback Loop
+
+Verifies whether execution outcomes satisfied intent constraints.
+
+It must NOT:
+- depend on external observability systems
+- perform long-term storage or analytics
+"""
+
 from typing import Dict
 
 

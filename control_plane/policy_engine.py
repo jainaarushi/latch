@@ -1,3 +1,13 @@
+"""
+Policy Engine
+
+Resolves tradeoffs across latency, cost, and constraints.
+
+It must NOT:
+- make infrastructure scheduling decisions
+- call external services or rely on offline logs
+"""
+
 from dataclasses import dataclass
 from typing import List
 from .intents import Intent
