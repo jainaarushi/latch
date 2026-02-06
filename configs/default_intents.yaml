@@ -1,0 +1,11 @@
+intents:
+  - name: summarize
+    priority: 1
+    constraints: []
+  - name: classify
+    priority: 2
+    constraints: []
+  - name: exfiltrate
+    priority: 9
+    constraints:
+      - deny
