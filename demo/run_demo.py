@@ -1,3 +1,10 @@
+if __name__ == "__main__" and __package__ is None:
+    # Allow `python demo/run_demo.py` from repo root.
+    import os
+    import sys
+
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from demo.traffic_simulator import generate_traffic
 from demo.demo_agent import DemoAgent
 from metrics.signals import derive_signals
