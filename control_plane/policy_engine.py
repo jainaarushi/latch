@@ -2,8 +2,7 @@
 Policy Engine (MVP)
 
 Purpose
-- Resolve conflicts between intents and convert them into a concrete "desired behavior"
-  for the current request window.
+- Decide how the system should behave given intent, signals, and request context.
 
 Inputs
 - intent: customer goals (latency vs cost vs priority vs quality floor)
@@ -11,7 +10,7 @@ Inputs
 - request_context: request type/tier/prompt size
 
 Outputs
-- policy: normalized constraints (e.g., priority=latency, max_tokens=256, allow_degrade=True)
+- policy: small, deterministic decision object with mode/priority/max_tokens/notes
 
 Hard constraints for MVP
 - Deterministic rules only (no ML, no optimization solvers).
@@ -26,30 +25,43 @@ Keep it small, testable, and boring.
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import Dict
 from .intents import Intent
 
 
 @dataclass
-class PolicyResult:
-    allowed: bool
-    mode: str
-    reason: str
+class Policy:
+    mode: str  # "normal" | "degraded"
+    priority: str  # "latency" | "throughput"
+    max_tokens: int
+    notes: str
 
 
 class PolicyEngine:
-    def __init__(self, blocked_intents: List[str] | None = None) -> None:
-        self.blocked_intents = set(blocked_intents or [])
+    def evaluate(self, intent: Intent, signals: Dict[str, float], request_context: Dict[str, str]) -> Policy:
+        p95_latency = float(signals.get("p95_latency_ms", 0.0))
+        cost_rate = float(signals.get("cost_rate", 0.0))
+        error_rate = float(signals.get("error_rate", 0.0))
+        queue_depth = float(signals.get("queue_depth", 0.0))
+        tier = request_context.get("tier", "free")
+        prompt_tokens = int(request_context.get("prompt_tokens", "256"))
 
-    def evaluate(self, intent: Intent) -> PolicyResult:
-        if intent.name in self.blocked_intents:
-            return PolicyResult(False, "deny", "blocked_intent")
         if "deny" in intent.constraints:
-            return PolicyResult(False, "deny", "explicit_deny")
-        if intent.max_latency_ms < 200 and intent.max_cost < 0.002:
-            return PolicyResult(False, "deny", "impossible_sla")
-        if intent.max_latency_ms <= 400:
-            return PolicyResult(True, "fast", "latency_priority")
-        if intent.max_cost <= 0.003:
-            return PolicyResult(True, "cheap", "cost_priority")
-        return PolicyResult(True, "balanced", "default_policy")
+            return Policy("degraded", "throughput", 0, "explicit_deny")
+
+        if error_rate > 0.05 or queue_depth > 8:
+            return Policy("degraded", "throughput", 128, "system_hot")
+
+        if p95_latency > intent.max_latency_ms:
+            return Policy("degraded", "latency", 256, "latency_hot")
+
+        if cost_rate > intent.max_cost:
+            return Policy("degraded", "throughput", 192, "cost_hot")
+
+        if intent.max_latency_ms <= 400 or intent.priority >= 8:
+            return Policy("normal", "latency", max(256, prompt_tokens // 2), "latency_priority")
+
+        if tier == "free":
+            return Policy("normal", "throughput", 256, "free_tier")
+
+        return Policy("normal", "throughput", 512, "default")

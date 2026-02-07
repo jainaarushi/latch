@@ -15,6 +15,16 @@ LLM behavior under load.
 
 ## Architecture
 
+```
+          ┌───────────────┐
+Request → │ Control Layer │ → Infra Hints → Runtime
+          └───────────────┘
+                 ↑
+            Feedback Loop
+                 ↑
+              Signals
+```
+
 User Request
 -> Control Layer (this repo)
 -> Inference Infrastructure (simulated llm-d)
