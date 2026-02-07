@@ -20,13 +20,26 @@ Non-goals
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import Any, List
+
+from latch.types import Signals
 
 
 @dataclass
 class Signal:
     name: str
     value: float
+
+
+def compute_signals(rolling_stats: Any) -> Signals:
+    """Public API to convert rolling stats into a stable Signals object."""
+    snapshot = rolling_stats.snapshot() if hasattr(rolling_stats, "snapshot") else rolling_stats
+    return Signals(
+        p95_latency_ms=float(snapshot.get("p95_latency_ms", 0.0)),
+        error_rate=float(snapshot.get("error_rate", 0.0)),
+        cost_rate=float(snapshot.get("avg_cost", 0.0)),
+        queue_depth=float(snapshot.get("avg_queue_depth", 0.0)),
+    )
 
 
 def derive_signals(snapshot: dict) -> List[Signal]:

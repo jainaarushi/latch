@@ -24,18 +24,21 @@ Non-goals
 Keep it small, testable, and boring.
 """
 
-from typing import Dict
-from .intents import Intent
-from latch.types import Policy
+from latch.types import Intent, Policy, RequestContext, Signals
+
+
+def decide_policy(intent: Intent, signals: Signals, request_context: RequestContext) -> Policy:
+    """Public API for policy decisions in the control plane."""
+    return PolicyEngine().evaluate(intent, signals, request_context)
 
 class PolicyEngine:
-    def evaluate(self, intent: Intent, signals: Dict[str, float], request_context: Dict[str, str]) -> Policy:
-        p95_latency = float(signals.get("p95_latency_ms", 0.0))
-        cost_rate = float(signals.get("cost_rate", 0.0))
-        error_rate = float(signals.get("error_rate", 0.0))
-        queue_depth = float(signals.get("queue_depth", 0.0))
-        tier = request_context.get("tier", "free")
-        prompt_tokens = int(request_context.get("prompt_tokens", "256"))
+    def evaluate(self, intent: Intent, signals: Signals, request_context: RequestContext) -> Policy:
+        p95_latency = float(signals.p95_latency_ms)
+        cost_rate = float(signals.cost_rate)
+        error_rate = float(signals.error_rate)
+        queue_depth = float(signals.queue_depth)
+        tier = request_context.tier
+        prompt_tokens = int(request_context.prompt_tokens)
 
         if "deny" in intent.constraints:
             return Policy("degraded", "throughput", 0, "explicit_deny")

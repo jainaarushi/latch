@@ -19,7 +19,7 @@ Keep it rules-first and deterministic for MVP.
 
 from dataclasses import dataclass
 from .intents import Intent
-from .policy_engine import PolicyResult
+from latch.types import Policy
 
 
 @dataclass
@@ -31,13 +31,11 @@ class Decision:
 
 
 class DecisionEngine:
-    def decide(self, intent: Intent, policy: PolicyResult) -> Decision:
-        if not policy.allowed:
-            return Decision(False, "deny", policy.reason, policy.mode)
+    def decide(self, intent: Intent, policy: Policy) -> Decision:
+        if policy.max_tokens <= 0:
+            return Decision(False, "deny", policy.notes, policy.mode)
         if intent.priority >= 8:
             return Decision(True, "escalate", "high_priority", policy.mode)
-        if policy.mode == "fast":
-            return Decision(True, "route_fast", "latency_budget", policy.mode)
-        if policy.mode == "cheap":
-            return Decision(True, "route_economy", "cost_budget", policy.mode)
-        return Decision(True, "allow", "policy_ok", policy.mode)
+        if policy.priority == "latency":
+            return Decision(True, "route_fast", policy.notes, policy.mode)
+        return Decision(True, "allow", policy.notes, policy.mode)
