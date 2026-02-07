@@ -43,4 +43,6 @@ A demo where:
 - with control loop enabled, latency/cost stay within target
 - decisions are logged clearly ("switched model", "capped tokens", "reduced batching")
 
+Under a simulated traffic spike, baseline inference degrades; with the control loop enabled, latency and/or cost stay within bounds automatically.
+
 Why this works: Codex sees hard boundaries, MVP scope, and non-goals.
