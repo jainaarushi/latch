@@ -3,6 +3,8 @@
 This repository demonstrates a reference implementation of an
 intent-based control plane for LLM inference systems.
 
+A reference implementation of an intent-aware control loop that sits in the inference path and stabilizes behavior under changing traffic
+
 ## What problem does this solve?
 
 LLM systems break in production because traffic, prompts, and usage
