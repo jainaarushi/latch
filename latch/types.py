@@ -31,7 +31,11 @@ class RequestContext:
     tier: str
     is_background: bool
     metadata: Dict[str, str] = field(default_factory=dict)
-    request_type: str = "user"  # "user" | "background"
+
+    @property
+    def request_type(self) -> str:
+        """Derived request type. Keep this consistent with `is_background`."""
+        return "background" if self.is_background else "user"
 
 
 @dataclass(frozen=True)
