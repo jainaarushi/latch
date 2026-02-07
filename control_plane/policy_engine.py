@@ -24,14 +24,12 @@ Non-goals
 Keep it small, testable, and boring.
 """
 
-from typing import Dict
 from latch.types import Intent, Policy, RequestContext, Signals
 
 
 def decide_policy(intent: Intent, signals: Signals, request_context: RequestContext) -> Policy:
     """Public API for policy decisions in the control plane."""
     return PolicyEngine().evaluate(intent, signals, request_context)
-
 
 class PolicyEngine:
     def evaluate(self, intent: Intent, signals: Signals, request_context: RequestContext) -> Policy:
