@@ -9,15 +9,6 @@ It must NOT:
 - encode infrastructure scheduling policy
 """
 
-from dataclasses import dataclass
-from typing import Dict
+from latch.types import RequestContext
 
-
-@dataclass
-class RequestContext:
-    user_id: str
-    trace_id: str
-    prompt_tokens: int
-    tier: str
-    is_background: bool
-    metadata: Dict[str, str]
+__all__ = ["RequestContext"]
