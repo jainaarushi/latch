@@ -40,6 +40,15 @@ User Request
 - Closed-loop feedback verification
 - Traffic and latency simulation
 
+
+## MVP non-goals
+
+- No dashboards or observability UI (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
+- No auth or tenancy (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
+- No real llm-d integration (see [MENTAL_MODEL](docs/MENTAL_MODEL.md))
+- No full agent framework integration (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
+- No vector DB / RAG (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
+
 ## What is intentionally mocked
 
 - GPUs
