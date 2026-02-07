@@ -33,10 +33,18 @@ from .intents import Intent
 
 class Translator:
     def translate(self, intent: Intent, decision: Decision) -> Dict[str, str]:
+        if decision.action == "route_fast":
+            runtime_mode = "fast"
+        elif decision.action == "route_economy":
+            runtime_mode = "cheap"
+        else:
+            runtime_mode = "balanced"
         return {
             "intent": intent.name,
             "action": decision.action,
-            "mode": decision.mode,
+            "policy_mode": decision.mode,
+            "runtime_mode": runtime_mode,
+            "mode": runtime_mode,
             "priority": str(intent.priority),
             "max_latency_ms": str(intent.max_latency_ms),
             "max_cost": f"{intent.max_cost:.4f}",
