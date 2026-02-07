@@ -1,6 +1,5 @@
 from control_plane import DecisionEngine, FeedbackLoop, PolicyEngine, Translator
 from control_plane.decision_engine import Decision
-from control_plane.policy_engine import PolicyResult
 from control_plane.intents import Intent
 from metrics.collector import MetricsCollector
 from runtime.gateway import RuntimeGateway
@@ -9,7 +8,7 @@ from runtime.request_context import RequestContext
 
 class DemoAgent:
     def __init__(self) -> None:
-        self.policy = PolicyEngine(blocked_intents=["exfiltrate"])
+        self.policy = PolicyEngine()
         self.decider = DecisionEngine()
         self.translator = Translator()
         self.runtime = RuntimeGateway()
@@ -17,12 +16,23 @@ class DemoAgent:
         self.metrics = MetricsCollector()
 
     def _baseline_decision(self) -> Decision:
-        policy = PolicyResult(True, "balanced", "baseline")
-        return Decision(True, "allow", "baseline", policy.mode)
+        return Decision(True, "allow", "baseline", "normal")
 
     def handle(self, intent: Intent, context: RequestContext, use_control: bool) -> dict:
         if use_control:
-            policy = self.policy.evaluate(intent)
+            signals = {
+                # Demo uses a cold-start signal set. Later phases will derive
+                # these from rolling metrics.
+                "p95_latency_ms": 0.0,
+                "error_rate": 0.0,
+                "cost_rate": 0.0,
+                "queue_depth": 0.0,
+            }
+            request_context = {
+                "tier": context.tier,
+                "prompt_tokens": str(context.prompt_tokens),
+            }
+            policy = self.policy.evaluate(intent, signals, request_context)
             decision = self.decider.decide(intent, policy)
         else:
             decision = self._baseline_decision()
