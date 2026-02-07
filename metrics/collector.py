@@ -23,8 +23,9 @@ Non-goals
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Deque, Dict, List, Optional
 
 from .rolling_stats import RollingStats
 
@@ -43,9 +44,9 @@ class MetricEvent:
 
 
 class MetricsCollector:
-    def __init__(self) -> None:
+    def __init__(self, *, max_events: int = 1000) -> None:
         self.stats = RollingStats()
-        self._events: List[MetricEvent] = []
+        self._events: Deque[MetricEvent] = deque(maxlen=int(max_events))
 
     def record(self, outcome: Dict[str, str]) -> None:
         allowed = outcome.get("allowed", "false") == "true"

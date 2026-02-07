@@ -12,6 +12,7 @@ It must NOT:
 
 from __future__ import annotations
 
+import inspect
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Tuple
@@ -105,22 +106,34 @@ class RequestSession:
         context, policy = self.before_model_call(prompt_text)
 
         # Phase 1 placeholder enforcement: cap max_tokens using the policy output.
-        effective_max_tokens = policy.max_tokens if max_tokens is None else min(int(max_tokens), policy.max_tokens)
+        policy_cap = max(0, int(policy.max_tokens))
+        requested = policy_cap if max_tokens is None else int(max_tokens)
+        effective_max_tokens = min(max(0, requested), policy_cap)
 
-        start = time.time()
+        start_ts = time.time()
+        start = time.perf_counter()
         error_type: Optional[str] = None
         value: Any = None
         tokens_out = 0
         try:
-            value = model_fn(prompt_text, model=model_id, max_tokens=effective_max_tokens, **kwargs)
-        except TypeError:
-            # Keep the SDK usable with simple callables in early demos.
-            value = model_fn(prompt_text)
+            call_kwargs: Dict[str, Any] = {"model": model_id, "max_tokens": effective_max_tokens, **kwargs}
+
+            # Avoid "retry on TypeError" because it can swallow real TypeErrors from inside model_fn.
+            # Instead, filter kwargs based on the callable signature when available.
+            try:
+                sig = inspect.signature(model_fn)
+                params = sig.parameters
+                accepts_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+                filtered = call_kwargs if accepts_var_kw else {k: v for k, v in call_kwargs.items() if k in params}
+                value = model_fn(prompt_text, **filtered)
+            except (TypeError, ValueError):
+                # Signature introspection can fail for builtins/extension callables; fall back to minimal call.
+                value = model_fn(prompt_text)
         except Exception as exc:
             error_type = type(exc).__name__
             raise
         finally:
-            latency_ms = (time.time() - start) * 1000.0
+            latency_ms = (time.perf_counter() - start) * 1000.0
 
             # Best-effort tokens_out extraction.
             if isinstance(value, dict):
