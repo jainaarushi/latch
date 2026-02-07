@@ -9,7 +9,7 @@ cd "$ROOT_DIR"
 
 PYTHON_BIN="${VENV_PYTHON:-python3}"
 
-$PYTHON_BIN -m py_compile $(git ls-files '*.py')
-$PYTHON_BIN -c "import latch; import control_plane"
+git ls-files -z -- '*.py' | xargs -0 -r "$PYTHON_BIN" -m py_compile
+"$PYTHON_BIN" -c "import latch; import control_plane"
 
 echo "dev_check: OK"
