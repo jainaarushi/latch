@@ -56,14 +56,20 @@ echo "==> Running sanity checks"
 python - <<'EOF_PY'
 import sys
 print("Python:", sys.version)
+EOF_PY
 
+if [ -d "latch" ] || [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
+  python - <<'EOF_PY'
 try:
     import latch
     print("Latch import: OK")
 except Exception as e:
     print("Latch import failed:", e)
-    sys.exit(1)
+    raise SystemExit(1)
 EOF_PY
+else
+  echo "Latch import skipped (SDK not yet scaffolded)"
+fi
 
 if [ -d "tests" ]; then
   pytest -q || echo "WARN: Tests failed (ok early on)"
