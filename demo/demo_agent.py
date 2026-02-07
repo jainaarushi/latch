@@ -1,4 +1,5 @@
-from control_plane import DecisionEngine, FeedbackLoop, PolicyEngine, Translator
+from control_plane import DecisionEngine, FeedbackLoop, Translator
+from control_plane.policy_engine import decide_policy
 from control_plane.decision_engine import Decision
 from control_plane.intents import Intent
 from latch.types import Signals
@@ -9,7 +10,6 @@ from runtime.request_context import RequestContext
 
 class DemoAgent:
     def __init__(self) -> None:
-        self.policy = PolicyEngine()
         self.decider = DecisionEngine()
         self.translator = Translator()
         self.runtime = RuntimeGateway()
@@ -21,7 +21,7 @@ class DemoAgent:
 
     def handle(self, intent: Intent, context: RequestContext, use_control: bool) -> dict:
         if use_control:
-            policy = self.policy.evaluate(intent, Signals(), context)
+            policy = decide_policy(intent, Signals(), context)
             decision = self.decider.decide(intent, policy)
         else:
             decision = self._baseline_decision()
