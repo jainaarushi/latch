@@ -13,7 +13,7 @@ MUST NOT:
 - implement distributed tracing
 """
 
-from typing import Dict
+from typing import Any, Callable, Dict
 from .fake_llmd import FakeLLMD
 from .request_context import RequestContext
 
@@ -26,5 +26,18 @@ class RuntimeGateway:
         enriched = dict(request)
         enriched["prompt_tokens"] = str(context.prompt_tokens)
         enriched["tier"] = context.tier
-        enriched["is_background"] = "true" if context.is_background else "false"
+        is_background = context.is_background or context.request_type == "background"
+        enriched["is_background"] = "true" if is_background else "false"
         return self.llmd.execute(enriched)
+
+
+def request_wrapper(
+    request_context: RequestContext,
+    before_model_call: Callable[..., Any],
+    after_model_call: Callable[..., Any],
+    model_call: Callable[..., Any],
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    """Public API skeleton for SDK request wrapping (no logic yet)."""
+    raise NotImplementedError("SDK request wrapper not implemented yet")
