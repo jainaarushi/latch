@@ -32,7 +32,10 @@ class DemoAgent:
             "allowed": "true" if decision.allowed else "false",
             "action": decision.action,
             "reason": decision.reason,
+            # Keep `mode` as the policy/controller mode for now (normal/degraded).
+            # Runtime-facing mode (fast/cheap/balanced) is separately recorded.
             "mode": decision.mode,
+            "runtime_mode": request.get("mode", "unknown"),
             "max_latency_ms": str(intent.max_latency_ms),
             "max_cost": f"{intent.max_cost:.4f}",
             "latency_ms": response.get("latency_ms", "0"),
