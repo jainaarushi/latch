@@ -24,18 +24,9 @@ Non-goals
 Keep it small, testable, and boring.
 """
 
-from dataclasses import dataclass
 from typing import Dict
 from .intents import Intent
-
-
-@dataclass
-class Policy:
-    mode: str  # "normal" | "degraded"
-    priority: str  # "latency" | "throughput"
-    max_tokens: int
-    notes: str
-
+from latch.types import Policy
 
 class PolicyEngine:
     def evaluate(self, intent: Intent, signals: Dict[str, float], request_context: Dict[str, str]) -> Policy:
