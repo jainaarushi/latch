@@ -3,6 +3,8 @@
 ## What we are building
 An intent-based control layer for LLM inference systems.
 
+This repository intentionally avoids building observability dashboards, infrastructure schedulers, or production gateways. The sole goal is to demonstrate closed-loop control logic.
+
 This system sits in the request path and continuously:
 Signals -> Decisions -> Actions -> Verification
 
