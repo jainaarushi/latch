@@ -26,8 +26,7 @@ class RuntimeGateway:
         enriched = dict(request)
         enriched["prompt_tokens"] = str(context.prompt_tokens)
         enriched["tier"] = context.tier
-        is_background = context.is_background or context.request_type == "background"
-        enriched["is_background"] = "true" if is_background else "false"
+        enriched["is_background"] = "true" if context.is_background else "false"
         return self.llmd.execute(enriched)
 
 
