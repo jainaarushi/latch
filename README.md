@@ -32,6 +32,83 @@ User Request
 -> Inference Infrastructure (simulated llm-d)
 -> Model Server
 
+## Longer-Term Product Diagram (Not MVP)
+
+This is the eventual product shape. The MVP in this repo focuses on the request-path
+control loop (signals -> decisions -> actions -> verification) and intentionally skips
+dashboards/tenancy/auth and real infra integrations.
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                           LATCH                               │
+│                                                               │
+│        ┌──────────────────────────────────────────┐           │
+│        │        PARENT BRAIN (ORCHESTRATOR)        │           │
+│        │  • Multi-objective controller             │           │
+│        │  • Chooses what to optimize right now     │           │
+│        │  • Arbitrates latency vs cost vs fairness │           │
+│        └───────────────┬───────────────┬──────────┘           │
+│                        │               │                      │
+│          Business Intent│               │Objective + Constraints
+│                        │               │                      │
+│      ┌─────────────────▼───┐     ┌─────▼──────────────────┐   │
+│      │ AGENT 1              │     │ AGENT 2                │   │
+│      │ Policy / Business SLO│     │ Performance Agent      │   │
+│      │ • P99 / TTFT targets │     │ Diagnoses root cause   │   │
+│      │ • Cost constraints   │     │ • Queuing              │   │
+│      │ • Tiering / fairness │     │ • Long prompts         │   │
+│      │ • Guardrails         │     │ • Bad batching         │   │
+│      └─────────────────────┘     │ • Prefill / decode     │   │
+│                                  │ • Memory pressure      │   │
+│                                  │                         │   │
+│                                  │ Executes runtime knobs │   │
+│                                  │ • Routing rules        │   │
+│                                  │ • Batch window         │   │
+│                                  │ • Autoscaling hints    │   │
+│                                  │ • Variant weights      │   │
+│                                  │ • Config changes       │   │
+│                                  └──────────┬─────────────┘   │
+│                                             │ Evidence         │
+│                               ┌─────────────▼─────────────┐   │
+│                               │ AGENT 3                    │   │
+│                               │ Dashboard / Analytics      │   │
+│                               │ • Unified perf view        │   │
+│                               │ • Model / tenant metrics   │   │
+│                               │ • Action history           │   │
+│                               │ • “Why this happened”      │   │
+│                               │ • Trust & auditability     │   │
+│                               └─────────────┬─────────────┘   │
+│                                             │ Feedback         │
+└─────────────────────────────────────────────▼─────────────────┘
+
+
+                           ▲
+                           │ Telemetry / Signals
+                           │ (P99, TTFT, GPU util, queues,
+                           │  batch size, prompt length,
+                           │  KV cache hit rate, cost)
+                           │
+┌───────────────────────────────────────────────────────────────┐
+│                 DATA PLANE (EXECUTION)                         │
+│                                                               │
+│   Client Requests                                              │
+│          │                                                    │
+│          ▼                                                    │
+│   API Gateway / Router                                        │
+│          │                                                    │
+│          ▼                                                    │
+│   Inference Engines                                           │
+│   (llm-d, vLLM, Triton)                                       │
+│          │                                                    │
+│          ▼                                                    │
+│   GPUs                                                        │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+            ▲
+            └───── Continuous Closed-Loop Control ─────┘
+```
+
 ## What is implemented
 
 - Intent schema
