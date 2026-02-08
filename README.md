@@ -1,19 +1,14 @@
 # LLM Intent Control Plane
 
-This repository demonstrates a reference implementation of an
-intent-based control plane for LLM inference systems.
+This repository demonstrates a reference implementation of an intent-based control plane for LLM inference systems.
 
-A reference implementation of an intent-aware control loop that sits in the inference path and stabilizes behavior under changing traffic
+A reference implementation of an intent-aware control loop that sits in the inference path and stabilizes behavior under changing traffic.
 
 ## What problem does this solve?
 
-LLM systems break in production because traffic, prompts, and usage
-patterns change continuously. Static configurations and observability
-are not enough.
+LLM systems break in production because traffic, prompts, and usage patterns change continuously. Static configurations and observability are not enough.
 
-This project shows how application intent (latency, cost, priority)
-can be translated into real-time control decisions that stabilize
-LLM behavior under load.
+This project shows how application intent (latency, cost, priority) can be translated into real-time control decisions that stabilize LLM behavior under load.
 
 ## Architecture
 
@@ -34,9 +29,7 @@ User Request
 
 ## Longer-Term Product Diagram (Not MVP)
 
-This is the eventual product shape. The MVP in this repo focuses on the request-path
-control loop (signals -> decisions -> actions -> verification) and intentionally skips
-dashboards/tenancy/auth and real infra integrations.
+This is the eventual product shape. The MVP in this repo focuses on the request-path control loop (signals -> decisions -> actions -> verification) and intentionally skips dashboards/tenancy/auth and real infra integrations.
 
 ```
 CONTROL PLANE (LATCH)
@@ -50,21 +43,21 @@ CONTROL PLANE (LATCH)
                                | Business intent              | Objectives + constraints
                                v                              v
 
-+------------------------------+   +--------------------------------------+
-| AGENT 1: Policy / Business SLO|  | AGENT 2: Performance Agent           |
-|  - P99 / TTFT targets         |  |  - Diagnoses root cause              |
-|  - Cost constraints           |  |    - Queuing                         |
-|  - Tiering / fairness         |  |    - Long prompts                    |
-|  - Guardrails                 |  |    - Bad batching                    |
-|                               |  |    - Prefill / decode                |
-|                               |  |    - Memory pressure                 |
-|                               |  |  - Executes runtime knobs            |
-|                               |  |    - Routing rules                   |
-|                               |  |    - Batch window                    |
-|                               |  |    - Autoscaling hints               |
-|                               |  |    - Variant weights                 |
-|                               |  |    - Config changes                  |
-+------------------------------+   +--------------------+-----------------+
++-------------------------------+   +--------------------------------------+
+| AGENT 1: Policy / Business SLO|   | AGENT 2: Performance Agent           |
+|  - P99 / TTFT targets         |   |  - Diagnoses root cause              |
+|  - Cost constraints           |   |    - Queuing                         |
+|  - Tiering / fairness         |   |    - Long prompts                    |
+|  - Guardrails                 |   |    - Bad batching                    |
+|                               |   |    - Prefill / decode                |
+|                               |   |    - Memory pressure                 |
+|                               |   |  - Executes runtime knobs            |
+|                               |   |    - Routing rules                   |
+|                               |   |    - Batch window                    |
+|                               |   |    - Autoscaling hints               |
+|                               |   |    - Variant weights                 |
+|                               |   |    - Config changes                  |
++-------------------------------+   +--------------------+-----------------+
                                                      | Evidence
                                                      v
 
@@ -72,10 +65,10 @@ CONTROL PLANE (LATCH)
 | AGENT 3: Dashboard / Analytics                                          |
 |  - Unified perf view                                                    |
 |  - Model / tenant metrics                                               |
-|  - Action history                                                      |
+|  - Action history                                                       |
 |  - "Why this happened"                                                 |
 |  - Trust & auditability                                                 |
-+------------------------------+------------------------------------------+
++-------------------------------------------------------------------------+
                                |
                                | Feedback
                                v
@@ -101,7 +94,6 @@ CONTROL PLANE (LATCH)
 - Closed-loop feedback verification
 - Traffic and latency simulation
 
-
 ## MVP non-goals
 
 - No dashboards or observability UI (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
@@ -120,4 +112,5 @@ CONTROL PLANE (LATCH)
 ## Goal
 
 Demonstrate closed-loop control, not model quality.
+
 MVP goal: demonstrate closed-loop control, not production completeness.
