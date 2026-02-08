@@ -27,7 +27,7 @@ dashboards/tenancy/auth and real infra integrations.
 │                           LATCH                               │
 │                                                               │
 │        ┌──────────────────────────────────────────┐           │
-│        │        PARENT BRAIN (ORCHESTRATOR)        │           │
+│        │        PARENT BRAIN                       │           │
 │        │  • Multi-objective controller             │           │
 │        │  • Chooses what to optimize right now     │           │
 │        │  • Arbitrates latency vs cost vs fairness │           │
