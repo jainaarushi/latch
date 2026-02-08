@@ -39,74 +39,58 @@ control loop (signals -> decisions -> actions -> verification) and intentionally
 dashboards/tenancy/auth and real infra integrations.
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                           LATCH                               │
-│                                                               │
-│        ┌──────────────────────────────────────────┐           │
-│        │        PARENT BRAIN (ORCHESTRATOR)        │           │
-│        │  • Multi-objective controller             │           │
-│        │  • Chooses what to optimize right now     │           │
-│        │  • Arbitrates latency vs cost vs fairness │           │
-│        └───────────────┬───────────────┬──────────┘           │
-│                        │               │                      │
-│          Business Intent│               │Objective + Constraints
-│                        │               │                      │
-│      ┌─────────────────▼───┐     ┌─────▼──────────────────┐   │
-│      │ AGENT 1              │     │ AGENT 2                │   │
-│      │ Policy / Business SLO│     │ Performance Agent      │   │
-│      │ • P99 / TTFT targets │     │ Diagnoses root cause   │   │
-│      │ • Cost constraints   │     │ • Queuing              │   │
-│      │ • Tiering / fairness │     │ • Long prompts         │   │
-│      │ • Guardrails         │     │ • Bad batching         │   │
-│      └─────────────────────┘     │ • Prefill / decode     │   │
-│                                  │ • Memory pressure      │   │
-│                                  │                         │   │
-│                                  │ Executes runtime knobs │   │
-│                                  │ • Routing rules        │   │
-│                                  │ • Batch window         │   │
-│                                  │ • Autoscaling hints    │   │
-│                                  │ • Variant weights      │   │
-│                                  │ • Config changes       │   │
-│                                  └──────────┬─────────────┘   │
-│                                             │ Evidence         │
-│                               ┌─────────────▼─────────────┐   │
-│                               │ AGENT 3                    │   │
-│                               │ Dashboard / Analytics      │   │
-│                               │ • Unified perf view        │   │
-│                               │ • Model / tenant metrics   │   │
-│                               │ • Action history           │   │
-│                               │ • “Why this happened”      │   │
-│                               │ • Trust & auditability     │   │
-│                               └─────────────┬─────────────┘   │
-│                                             │ Feedback         │
-└─────────────────────────────────────────────▼─────────────────┘
+CONTROL PLANE (LATCH)
 
++-------------------------------------------------------------------------+
+|                      PARENT BRAIN (ORCHESTRATOR)                        |
+|  - Multi-objective controller                                           |
+|  - Chooses what to optimize right now                                   |
+|  - Arbitrates latency vs cost vs fairness                               |
++------------------------------+------------------------------+-----------+
+                               | Business intent              | Objectives + constraints
+                               v                              v
 
-                           ▲
-                           │ Telemetry / Signals
-                           │ (P99, TTFT, GPU util, queues,
-                           │  batch size, prompt length,
-                           │  KV cache hit rate, cost)
-                           │
-┌───────────────────────────────────────────────────────────────┐
-│                 DATA PLANE (EXECUTION)                         │
-│                                                               │
-│   Client Requests                                              │
-│          │                                                    │
-│          ▼                                                    │
-│   API Gateway / Router                                        │
-│          │                                                    │
-│          ▼                                                    │
-│   Inference Engines                                           │
-│   (llm-d, vLLM, Triton)                                       │
-│          │                                                    │
-│          ▼                                                    │
-│   GPUs                                                        │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
++------------------------------+   +--------------------------------------+
+| AGENT 1: Policy / Business SLO|  | AGENT 2: Performance Agent           |
+|  - P99 / TTFT targets         |  |  - Diagnoses root cause              |
+|  - Cost constraints           |  |    - Queuing                         |
+|  - Tiering / fairness         |  |    - Long prompts                    |
+|  - Guardrails                 |  |    - Bad batching                    |
+|                               |  |    - Prefill / decode                |
+|                               |  |    - Memory pressure                 |
+|                               |  |  - Executes runtime knobs            |
+|                               |  |    - Routing rules                   |
+|                               |  |    - Batch window                    |
+|                               |  |    - Autoscaling hints               |
+|                               |  |    - Variant weights                 |
+|                               |  |    - Config changes                  |
++------------------------------+   +--------------------+-----------------+
+                                                     | Evidence
+                                                     v
 
-            ▲
-            └───── Continuous Closed-Loop Control ─────┘
++-------------------------------------------------------------------------+
+| AGENT 3: Dashboard / Analytics                                          |
+|  - Unified perf view                                                    |
+|  - Model / tenant metrics                                               |
+|  - Action history                                                      |
+|  - "Why this happened"                                                 |
+|  - Trust & auditability                                                 |
++------------------------------+------------------------------------------+
+                               |
+                               | Feedback
+                               v
+
+                 ^ Telemetry / Signals
+                 | (P99, TTFT, GPU util, queues, batch size,
+                 |  prompt length, KV cache hit rate, cost)
+                 |
++-------------------------------------------------------------------------+
+| DATA PLANE (EXECUTION)                                                  |
+|  Client Requests -> API Gateway / Router -> Inference Engines -> GPUs    |
+|  (llm-d, vLLM, Triton)                                                  |
++-------------------------------------------------------------------------+
+
+                 +---- Continuous Closed-Loop Control --------------------+
 ```
 
 ## What is implemented
