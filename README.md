@@ -10,22 +10,6 @@ LLM systems break in production because traffic, prompts, and usage patterns cha
 
 This project shows how application intent (latency, cost, priority) can be translated into real-time control decisions that stabilize LLM behavior under load.
 
-## Architecture
-
-```
-          ┌───────────────┐
-Request → │ Control Layer │ → Infra Hints → Runtime
-          └───────────────┘
-                 ↑
-            Feedback Loop
-                 ↑
-              Signals
-```
-
-User Request
--> Control Layer (this repo)
--> Inference Infrastructure (simulated llm-d)
--> Model Server
 
 ## Longer-Term Product Diagram (Not MVP)
 
@@ -91,7 +75,7 @@ CONTROL PLANE (LATCH)
 - `Parent brain`: multi-objective controller that continuously decides what to optimize and which sub-agent gets to act.
 - `Agent 1 (Policy / Business SLO agent)`: translates business goals into concrete targets and constraints (example: "P99 < 2.5s for paid tier, keep GPU $/1k tokens under X, protect fairness across tenants").
 - `Agent 2 (Performance / Runtime tuning agent)`: diagnoses why latency is bad and executes runtime knob changes (routing, scheduling, batching, autoscaling, config).
-- `Agent 3 (Dashboard / Analytics agent)`: observability UX and the evidence layer Agent 2 uses (plus explanation/traceability for humans).
+- `Agent 3 (Dashboard / Analytics agent)`: observability UX and the evidence layer Agent 2 uses (plus explanation/traceability for performance engineer).
 
 ## What is implemented
 
@@ -100,14 +84,25 @@ CONTROL PLANE (LATCH)
 - Runtime request interception
 - Closed-loop feedback verification
 - Traffic and latency simulation
+  ## Architecture
+
+```
+          ┌───────────────┐
+Request → │ Control Layer │ → Infra Hints → Runtime
+          └───────────────┘
+                 ↑
+            Feedback Loop
+                 ↑
+              Signals
+```
 
 ## MVP non-goals
 
-- No dashboards or observability UI (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
-- No auth or tenancy (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
-- No real llm-d integration (see [MENTAL_MODEL](docs/MENTAL_MODEL.md))
-- No full agent framework integration (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
-- No vector DB / RAG (see [STARTUP_CONTEXT](docs/STARTUP_CONTEXT.md))
+- No dashboards or observability UI
+- No auth or tenancy
+- No real llm-d integration
+- No full agent framework integration
+- No vector DB / RAG
 
 ## What is intentionally mocked
 
