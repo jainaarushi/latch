@@ -15,22 +15,6 @@ This project shows how application intent (latency, cost, priority)
 can be translated into real-time control decisions that stabilize
 LLM behavior under load.
 
-## Architecture
-
-```
-          ┌───────────────┐
-Request → │ Control Layer │ → Infra Hints → Runtime
-          └───────────────┘
-                 ↑
-            Feedback Loop
-                 ↑
-              Signals
-```
-
-User Request
--> Control Layer (this repo)
--> Inference Infrastructure (simulated llm-d)
--> Model Server
 
 ## Longer-Term Product Diagram (Not MVP)
 
@@ -116,6 +100,18 @@ dashboards/tenancy/auth and real infra integrations.
 - Runtime request interception
 - Closed-loop feedback verification
 - Traffic and latency simulation
+
+## Architecture
+
+```
+          ┌───────────────┐
+Request → │ Control Layer │ → Infra Hints → Runtime
+          └───────────────┘
+                 ↑
+            Feedback Loop
+                 ↑
+              Signals
+```
 
 
 ## MVP non-goals
