@@ -86,6 +86,13 @@ CONTROL PLANE (LATCH)
                  +---- Continuous Closed-Loop Control --------------------+
 ```
 
+### Legend (What Each Box Means)
+
+- `Parent brain`: multi-objective controller that continuously decides what to optimize and which sub-agent gets to act.
+- `Agent 1 (Policy / Business SLO agent)`: translates business goals into concrete targets and constraints (example: "P99 < 2.5s for paid tier, keep GPU $/1k tokens under X, protect fairness across tenants").
+- `Agent 2 (Performance / Runtime tuning agent)`: diagnoses why latency is bad and executes runtime knob changes (routing, scheduling, batching, autoscaling, config).
+- `Agent 3 (Dashboard / Analytics agent)`: observability UX and the evidence layer Agent 2 uses (plus explanation/traceability for humans).
+
 ## What is implemented
 
 - Intent schema
