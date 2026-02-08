@@ -1,4 +1,4 @@
-# Startup Context (read before coding)
+# Startup Context
 
 ## What we are building
 An intent-based control layer for LLM inference systems.
