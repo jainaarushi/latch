@@ -7,6 +7,8 @@ REPLICAS="${REPLICAS:-2}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-512}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.20}"
 K3S_CHANNEL="${K3S_CHANNEL:-stable}"
+KILL_LOCAL_VLLM="${KILL_LOCAL_VLLM:-false}"
+LOCAL_VLLM_KILL_PATTERN="${LOCAL_VLLM_KILL_PATTERN:-vllm serve}"
 
 log() { echo "[setup] $*"; }
 
@@ -112,10 +114,15 @@ install_device_plugin() {
 }
 
 cleanup_old_vllm() {
-  log "Stopping old local vLLM process if present"
-  pkill -f '/home/ubuntu/vllm-venv/bin/vllm serve' || true
+  if [[ "$KILL_LOCAL_VLLM" != "true" ]]; then
+    log "Skipping local vLLM process cleanup (KILL_LOCAL_VLLM=false)"
+    return
+  fi
 
+  log "Stopping local vLLM process(es) matching pattern: $LOCAL_VLLM_KILL_PATTERN"
+  pkill -f "$LOCAL_VLLM_KILL_PATTERN" || true
 }
+
 
 deploy_vllm() {
   log "Deploying vLLM to namespace: $NAMESPACE"

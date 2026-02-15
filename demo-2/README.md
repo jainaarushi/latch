@@ -45,6 +45,8 @@ Environment variables for `scripts/setup_kubnamespace_vllm.sh`:
 - `MAX_MODEL_LEN` (default `512`)
 - `GPU_MEMORY_UTILIZATION` (default `0.20`)
 - `K3S_CHANNEL` (default `stable`)
+- `KILL_LOCAL_VLLM` (default `false`)
+- `LOCAL_VLLM_KILL_PATTERN` (default `vllm serve`) used only when `KILL_LOCAL_VLLM=true`
 
 Example:
 
