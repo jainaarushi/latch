@@ -12,7 +12,8 @@ Reproducible local Kubernetes + NVIDIA + vLLM setup and synthetic traffic runner
 ## Quickstart
 
 ```bash
-cd /home/ubuntu/vllm-k8s-starter
+# from the repository root
+cd demo-2
 bash scripts/setup_kubnamespace_vllm.sh
 ```
 
