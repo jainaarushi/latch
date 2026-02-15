@@ -75,3 +75,59 @@ All optional (defaults are built into the script):
 - `jitter_ms`
 - `timeout_s`
 - `traffic_node_name` (optional node pin for traffic pod)
+
+## llm-d (TinyLlama) Setup
+
+This deploys llm-d inference scheduling on top of your Kubernetes cluster using TinyLlama only.
+
+```bash
+# from repo root
+cd demo-2
+bash scripts/setup_llmd_tinyllama.sh
+```
+
+Important defaults for low footprint:
+
+- Single decode replica (`DECODE_REPLICAS=1`)
+- TinyLlama model (`TinyLlama/TinyLlama-1.1B-Chat-v1.0`)
+- No Prometheus CRD objects (`ServiceMonitor`/`PodMonitor` disabled)
+
+Environment variables:
+
+- `NAMESPACE` (default `kubnamespace`)
+- `LLMD_DIR` (default `/home/ubuntu/llm-d`)
+- `LLMD_REPO` (default `git@github.com:llm-d/llm-d.git`)
+- `MODEL` (default `TinyLlama/TinyLlama-1.1B-Chat-v1.0`)
+- `MAX_MODEL_LEN` (default `512`)
+- `GPU_MEMORY_UTILIZATION` (default `0.30`)
+- `DECODE_REPLICAS` (default `1`)
+
+## Run Traffic Through llm-d Gateway
+
+Using static profile:
+
+```bash
+bash scripts/run_synthetic_traffic.sh profiles/llmd-load.json
+```
+
+Using dynamic wrapper (builds profile from env):
+
+```bash
+bash scripts/run_llmd_traffic.sh
+```
+
+Optional wrapper env vars:
+
+- `NAMESPACE`
+- `RELEASE_NAME_POSTFIX` (default `inference-scheduling`)
+- `GATEWAY_URI` (overrides computed URI)
+- `MODEL`
+- `TOTAL_REQUESTS`
+- `CONCURRENCY`
+- `STREAM`
+- `MAX_TOKENS`
+- `LONG_SYSTEM_TOKENS`
+- `LONG_USER_TOKENS`
+- `START_SPACING_MS`
+- `JITTER_MS`
+- `TIMEOUT_S`

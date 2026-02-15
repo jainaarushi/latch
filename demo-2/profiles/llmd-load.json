@@ -1,0 +1,14 @@
+{
+  "namespace": "kubnamespace",
+  "gateway_uri": "http://infra-inference-scheduling-inference-gateway-istio.kubnamespace.svc.cluster.local",
+  "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "total_requests": 200,
+  "concurrency": 16,
+  "stream": false,
+  "max_tokens": 32,
+  "long_system_tokens": 0,
+  "long_user_tokens": 0,
+  "start_spacing_ms": 0,
+  "jitter_ms": 0,
+  "timeout_s": 120
+}
