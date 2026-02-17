@@ -1,0 +1,7 @@
+{
+  "namespace": "kubnamespace",
+  "total_requests": 10,
+  "concurrency": 2,
+  "max_tokens": 16,
+  "timeout_s": 60
+}
