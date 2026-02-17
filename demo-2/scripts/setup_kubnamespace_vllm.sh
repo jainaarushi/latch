@@ -3,12 +3,15 @@ set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-kubnamespace}"
 MODEL="${MODEL:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}"
-REPLICAS="${REPLICAS:-2}"
+REPLICAS="${REPLICAS:-1}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-512}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.20}"
 K3S_CHANNEL="${K3S_CHANNEL:-stable}"
 KILL_LOCAL_VLLM="${KILL_LOCAL_VLLM:-false}"
 LOCAL_VLLM_KILL_PATTERN="${LOCAL_VLLM_KILL_PATTERN:-vllm serve}"
+VLLM_IMAGE="${VLLM_IMAGE:-vllm/vllm-openai:nightly}"
+VLLM_LD_LIBRARY_PATH="${VLLM_LD_LIBRARY_PATH:-/lib/x86_64-linux-gnu}"
+VLLM_LD_PRELOAD="${VLLM_LD_PRELOAD:-/lib/x86_64-linux-gnu/libcuda.so.1}"
 
 log() { echo "[setup] $*"; }
 
@@ -39,9 +42,10 @@ ensure_nvidia_driver() {
     return
   fi
 
-  log "Installing NVIDIA driver utilities (535)"
+  log "Installing NVIDIA driver via ubuntu-drivers"
   sudo apt-get update
-  sudo apt-get install -y nvidia-utils-535 nvidia-driver-535
+  sudo apt-get install -y ubuntu-drivers-common
+  sudo ubuntu-drivers autoinstall
 
   if ! nvidia-smi >/dev/null 2>&1; then
     echo "nvidia-smi still unavailable. Reboot required after driver install. Run: sudo reboot" >&2
@@ -83,6 +87,13 @@ install_nvidia_container_toolkit() {
     sudo apt-get install -y nvidia-container-toolkit
   fi
 
+  log "Configuring nvidia-container-toolkit for containerd"
+  if [[ -f /var/lib/rancher/k3s/agent/etc/containerd/config.toml ]]; then
+    sudo nvidia-ctk runtime configure --runtime=containerd --config=/var/lib/rancher/k3s/agent/etc/containerd/config.toml
+  else
+    sudo nvidia-ctk runtime configure --runtime=containerd
+  fi
+
   log "Restarting k3s"
   sudo systemctl restart k3s
 }
@@ -91,7 +102,6 @@ install_device_plugin() {
   log "Applying NVIDIA device plugin"
   kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.4/deployments/static/nvidia-device-plugin.yml >/dev/null
 
-  # Ensure plugin runs with NVIDIA runtime class so it can discover devices.
   kubectl -n kube-system patch ds nvidia-device-plugin-daemonset \
     --type='json' \
     -p='[{"op":"add","path":"/spec/template/spec/runtimeClassName","value":"nvidia"}]' >/dev/null || true
@@ -123,7 +133,6 @@ cleanup_old_vllm() {
   pkill -f "$LOCAL_VLLM_KILL_PATTERN" || true
 }
 
-
 deploy_vllm() {
   log "Deploying vLLM to namespace: $NAMESPACE"
   cat >/tmp/vllm-kubnamespace.yaml <<YAML
@@ -151,7 +160,7 @@ spec:
       runtimeClassName: nvidia
       containers:
       - name: vllm
-        image: vllm/vllm-openai:v0.15.1
+        image: ${VLLM_IMAGE}
         imagePullPolicy: IfNotPresent
         args:
         - --model
@@ -174,6 +183,10 @@ spec:
           value: INFO
         - name: VLLM_PORT
           value: "8000"
+        - name: LD_LIBRARY_PATH
+          value: "${VLLM_LD_LIBRARY_PATH}"
+        - name: LD_PRELOAD
+          value: "${VLLM_LD_PRELOAD}"
         ports:
         - containerPort: 8000
           name: http
@@ -195,9 +208,11 @@ spec:
           requests:
             cpu: "2"
             memory: "6Gi"
+            nvidia.com/gpu: "1"
           limits:
             cpu: "4"
             memory: "10Gi"
+            nvidia.com/gpu: "1"
         volumeMounts:
         - name: hf-cache
           mountPath: /cache/hf
