@@ -20,6 +20,7 @@ This section documents the core LATCH runtime flow for Kubernetes:
 - live per-pod metric printing
 - `latch-metrics` normalizer service with `GET /state`
 - deterministic incident detector service with `GET /incidents`
+- evidence-based diagnoser service with `GET /incidents/{id}/diagnosis`
 
 Run `make help` to list all targets.
 
@@ -193,6 +194,43 @@ Rule config is externalized in `services/latch-detector/rules.yaml` so you can l
 Detector tuning guide:
 - `docs/detector.md`
 
+### 8) Phase 5: Diagnosis (`/incidents/{id}/diagnosis`)
+
+Deploy diagnoser:
+
+```bash
+NAMESPACE=latchverify make up-latch-diagnoser
+```
+
+Run diagnosis:
+
+```bash
+NAMESPACE=latchverify make diagnose INC=inc_0241
+```
+
+Expected output shape:
+
+```text
+[diagnosis] Incident inc_0241
+Root cause: Traffic routing skew is overloading a single replica.
+Confidence: 0.86
+
+Evidence:
+- vllm-0 qps=9.7 vs vllm-1 qps=1.2 vs vllm-2 qps=1.2
+- vllm-0 queue=14 vs vllm-1 queue=0 vs vllm-2 queue=0
+- Global TTFT p95 increased 280ms -> 520ms (+92%)
+
+Recommendation:
+- Switch to load-aware routing (or reset weights to 34/33/33)
+Risk: Low (config-only change, reversible)
+Rollback: restore previous routing weights
+```
+
+Guardrails:
+- narrative formatter only uses diagnoser facts (no hallucinated facts)
+- includes `Sources` referencing evidence field names
+- details in `docs/safety.md`
+
 ## Important File Structure (Quick Map)
 
 ```text
@@ -209,23 +247,31 @@ Detector tuning guide:
 │   ├── up_latch_metrics.sh                # Deploy latch-metrics normalizer service
 │   ├── state.sh                           # Query normalized GET /state JSON
 │   ├── up_latch_detector.sh               # Deploy latch-detector service
-│   └── incidents.sh                       # Query and print active incidents
+│   ├── incidents.sh                       # Query and print active incidents
+│   ├── up_latch_diagnoser.sh              # Deploy latch-diagnoser service
+│   └── diagnose.sh                        # Query incident diagnosis output
 ├── deploy/
 │   ├── vllm/deployment.yaml               # vLLM K8s deployment/service spec
 │   ├── llmd/httproute.yaml                # Routing into llm-d entrypoint
 │   ├── scenarios/imbalance.yaml           # Route-weight skew scenario manifest
-│   └── latch-detector/deployment.yaml     # Latch detector deployment/service
+│   ├── latch-detector/deployment.yaml     # Latch detector deployment/service
+│   └── latch-diagnoser/deployment.yaml    # Latch diagnoser deployment/service
 ├── services/latch-metrics/main.py         # Normalized cluster-state API implementation
 ├── services/latch-detector/
 │   ├── main.py                            # Deterministic incident detector API
 │   └── rules.yaml                         # Rule thresholds (AI-ready swap point)
+├── services/latch-diagnoser/
+│   ├── main.py                            # Diagnosis endpoint with root-cause logic
+│   ├── llm_summarizer.py                  # Guardrailed fact-only narrative formatter
+│   └── templates/imbalance.md             # Human-readable diagnosis template
 ├── tools/loadgen/loadgen.py               # Load generation engine (steady/burst/mixed prompts)
 └── docs/
     ├── phase1_runbook.md                  # Verified Phase 1 command sequence
     ├── metrics.md                         # Metrics definitions and PromQL
     ├── loadgen.md                         # Load generator usage
     ├── scenarios.md                       # Incident scenario workflow
-    └── detector.md                        # Detector rule tuning guide
+    ├── detector.md                        # Detector rule tuning guide
+    └── safety.md                          # Guardrails for diagnosis narrative
 ```
 
 
