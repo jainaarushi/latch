@@ -37,6 +37,31 @@ It also applies an A100-focused MIG layout and enforces minimum schedulable GPU 
 
 Detailed notes: `docs/from_zero_bootstrap.md`
 
+Run this exact sequence next time on a fresh A100 host:
+
+```bash
+git clone git@github.com:jainaarushi/latch.git
+cd latch
+git checkout codex/add-from-zero-bootstrap
+REPLICAS=3 NAMESPACE=kubnamespace RELEASE_POSTFIX=kubnamespace make bootstrap-from-zero
+```
+
+If driver/MIG changes require reboot, continue with:
+
+```bash
+REPLICAS=3 make bootstrap-mig-layout
+REPLICAS=3 EXPECTED_GPU_RESOURCE_MIN_COUNT=3 make bootstrap-k8s-gpu
+REPLICAS=3 NAMESPACE=kubnamespace RELEASE_POSTFIX=kubnamespace make full-setup
+```
+
+Quick validation:
+
+```bash
+NAMESPACE=kubnamespace make doctor
+NAMESPACE=kubnamespace make mig-check
+NAMESPACE=kubnamespace SERVICE=infra-kubnamespace-inference-gateway-istio PORT=80 MODEL=tinyllama make test-infer
+```
+
 ### 1) Prereqs and cluster checks
 
 ```bash
