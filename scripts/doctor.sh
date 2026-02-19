@@ -4,33 +4,61 @@ set -euo pipefail
 NAMESPACE=${NAMESPACE:-kubnamespace}
 
 if ! command -v kubectl >/dev/null 2>&1; then
-  echo "kubectl is required"
+  echo "[doctor] Checking kubectl... FAIL (not found)"
+  exit 1
+fi
+KVER=$(kubectl version --client --short 2>/dev/null | head -n1 | sed 's/Client Version: //')
+echo "[doctor] Checking kubectl... OK (${KVER:-installed})"
+
+if command -v helm >/dev/null 2>&1; then
+  HVER=$(helm version --short 2>/dev/null | head -n1)
+  echo "[doctor] Checking helm... OK (${HVER})"
+else
+  echo "[doctor] Checking helm... WARN (not found)"
+fi
+
+CTX=$(kubectl config current-context 2>/dev/null || true)
+if [[ -n "${CTX}" ]]; then
+  echo "[doctor] Checking cluster access... OK (context: ${CTX})"
+else
+  echo "[doctor] Checking cluster access... FAIL"
   exit 1
 fi
 
-echo "== kubectl context =="
-kubectl config current-context
+NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if [[ -z "${NODE}" ]]; then
+  echo "[doctor] Checking node discovery... FAIL"
+  exit 1
+fi
+echo "[doctor] Checking node discovery... OK (${NODE})"
 
-echo ""
-echo "== nodes =="
-kubectl get nodes -o wide
+ALLOC=$(kubectl describe node "${NODE}" | sed -n '/Allocatable:/,/System Info:/p' | grep -E 'nvidia.com/(gpu|mig)' || true)
+if [[ -z "${ALLOC}" ]]; then
+  echo "[doctor] Checking node GPU allocatable... FAIL (no nvidia resource)"
+  exit 1
+fi
+echo "[doctor] Checking node GPU allocatable... OK"
+echo "${ALLOC}" | sed 's/^/[doctor]   /'
 
-echo ""
-echo "== nvidia resources (allocatable) =="
-kubectl get nodes -o go-template='{{range .items}}{{.metadata.name}}{{"\n"}}{{range $k,$v := .status.allocatable}}{{printf "  %s=%s\n" $k $v}}{{end}}{{"\n"}}{{end}}' \
-  | grep -E '^[^ ]|nvidia.com/' || true
-
-echo ""
-echo "== device plugin / dcgm DaemonSets =="
-kubectl -n kube-system get ds | grep -Ei 'nvidia|dcgm' || true
-
-echo ""
-echo "== first node MIG details =="
-FIRST_NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
-if [[ -n "${FIRST_NODE}" ]]; then
-  kubectl describe node "${FIRST_NODE}" | grep -Ein 'mig|nvidia.com|allocatable|capacity' || true
+if echo "${ALLOC}" | grep -q 'nvidia.com/mig-'; then
+  echo "[doctor] Checking MIG mode... Mode A (explicit MIG resources)"
+else
+  echo "[doctor] Checking MIG mode... Mode B (MIG-backed gpu units)"
 fi
 
-echo ""
-echo "== namespace quick status (${NAMESPACE}) =="
-kubectl -n "${NAMESPACE}" get pods,svc,deploy || true
+PLUGIN=$(kubectl -n kube-system get ds --no-headers 2>/dev/null | grep -Ei 'nvidia|dcgm' || true)
+if [[ -n "${PLUGIN}" ]]; then
+  echo "[doctor] Checking device plugin... OK"
+else
+  echo "[doctor] Checking device plugin... WARN (not found)"
+fi
+
+if kubectl get runtimeclass nvidia >/dev/null 2>&1; then
+  echo "[doctor] Checking GPU runtime class... OK (nvidia)"
+else
+  echo "[doctor] Checking GPU runtime class... WARN (runtimeclass nvidia not found)"
+fi
+
+echo "[doctor] Checking namespace resources (${NAMESPACE})..."
+kubectl -n "${NAMESPACE}" get pods,svc,deploy 2>/dev/null | sed 's/^/[doctor]   /' || echo "[doctor]   (namespace empty or missing)"
+echo "[doctor] Done."

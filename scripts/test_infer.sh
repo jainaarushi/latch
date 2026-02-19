@@ -13,16 +13,17 @@ COMPLETION_RETRIES=${COMPLETION_RETRIES:-30}
 COMPLETION_WAIT_INTERVAL_S=${COMPLETION_WAIT_INTERVAL_S:-2}
 
 if ! command -v kubectl >/dev/null 2>&1; then
-  echo "kubectl is required"
+  echo "[infer] kubectl is required"
   exit 1
 fi
 if ! command -v curl >/dev/null 2>&1; then
-  echo "curl is required"
+  echo "[infer] curl is required"
   exit 1
 fi
 
 kubectl -n "${NAMESPACE}" get svc "${SERVICE}" >/dev/null
 
+echo "[infer] Port-forwarding svc/${SERVICE} (${NAMESPACE})..."
 kubectl -n "${NAMESPACE}" port-forward svc/"${SERVICE}" "${LOCAL_PORT}:${PORT}" >/tmp/port-forward-${SERVICE}.log 2>&1 &
 PF_PID=$!
 cleanup() {
@@ -50,13 +51,13 @@ if [[ "${MODEL_FOUND}" != "yes" ]]; then
   if command -v jq >/dev/null 2>&1; then
     FALLBACK_MODEL=$(echo "${MODELS}" | jq -r '.data[0].id // empty')
     if [[ -n "${FALLBACK_MODEL}" ]]; then
-      echo "Model '${MODEL}' not found; using gateway model '${FALLBACK_MODEL}' instead."
+      echo "[infer] Model '${MODEL}' not found; using gateway model '${FALLBACK_MODEL}' instead."
       MODEL="${FALLBACK_MODEL}"
     else
-      echo "Model '${MODEL}' was not found in /v1/models after ${MODEL_WAIT_RETRIES} retries; proceeding with original model id."
+      echo "[infer] Model '${MODEL}' was not found in /v1/models after ${MODEL_WAIT_RETRIES} retries; proceeding with original model id."
     fi
   else
-    echo "Model '${MODEL}' was not found in /v1/models after ${MODEL_WAIT_RETRIES} retries; proceeding with original model id."
+    echo "[infer] Model '${MODEL}' was not found in /v1/models after ${MODEL_WAIT_RETRIES} retries; proceeding with original model id."
   fi
 fi
 
@@ -82,9 +83,9 @@ echo "${RESP}" | (command -v jq >/dev/null && jq . || cat)
 
 if [[ "${HAS_CHOICES}" == "yes" ]]; then
   echo ""
-  echo "PASS: valid OpenAI-style response returned from ${SERVICE}."
+  echo "[infer] PASS: valid OpenAI-style response returned from ${SERVICE}."
 else
   echo ""
-  echo "FAIL: response missing choices field after ${COMPLETION_RETRIES} retries"
+  echo "[infer] FAIL: response missing choices field after ${COMPLETION_RETRIES} retries"
   exit 1
 fi

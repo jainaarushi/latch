@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke up up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 
@@ -8,6 +8,7 @@ help:
 	@echo "  make smoke   - run minimal SDK smoke demo"
 	@echo "  make demo    - run the traffic-control demo"
 	@echo "  make up      - deploy 2x vLLM pods + service in Kubernetes"
+	@echo "  make up-vllm - same as make up (phase-1 naming)"
 	@echo "  make up-llmd - deploy llm-d gateway+scheduler in front of vLLM"
 	@echo "  make test-infer - run /v1/chat/completions smoke test"
 	@echo "  make doctor  - cluster preflight checks (context, nodes, GPU/MIG, plugins)"
@@ -27,6 +28,8 @@ demo:
 
 up:
 	./scripts/up.sh
+
+up-vllm: up
 
 up-llmd:
 	./scripts/up_llmd.sh
