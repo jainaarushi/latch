@@ -82,13 +82,13 @@ def _build_diagnosis(incident_id: str, incident: Dict[str, Any], state_payload: 
     evidence_lines = []
     evidence_lines.extend(_replica_lines(replicas))
     evidence_lines.append(
-        f"Global TTFT p95 increased {ttft_baseline:.1f}ms -> {ttft_current:.1f}ms (+{ttft_increase:.1f}%)"
+        f"Global TTFT p95 increased {ttft_baseline:.1f}ms -> {ttft_current:.1f}ms ({ttft_increase:+.1f}%)"
     )
     evidence_lines.append(
         f"QPS skew {skew:.2f}x exceeded threshold {skew_threshold:.2f}x"
     )
     evidence_lines.append(
-        f"TTFT increase threshold check: +{ttft_increase:.1f}% > +{ttft_threshold:.1f}%"
+        f"TTFT increase threshold check: {ttft_increase:+.1f}% > {ttft_threshold:+.1f}%"
     )
 
     diagnosis: Dict[str, Any] = {
