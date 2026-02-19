@@ -53,6 +53,13 @@ helm upgrade --install "gaie-${RELEASE_POSTFIX}" \
   --version "${GAIE_VERSION}" \
   -n "${NAMESPACE}" \
   -f deploy/llmd/gaie-values.yaml \
+  -f <(cat <<EOF
+provider:
+  istio:
+    destinationRule:
+      host: "gaie-${RELEASE_POSTFIX}-epp.${NAMESPACE}.svc.cluster.local"
+EOF
+) \
   --wait
 
 sed \
