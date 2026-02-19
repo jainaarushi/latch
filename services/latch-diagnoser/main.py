@@ -17,6 +17,19 @@ IMBALANCE_TEMPLATE = Path(os.getenv("IMBALANCE_TEMPLATE", "/app/imbalance.md"))
 app = FastAPI(title="latch-diagnoser", version="0.1.0")
 
 
+def _resolve_template() -> Path:
+    candidates = [
+        IMBALANCE_TEMPLATE,
+        Path("/app/imbalance.md"),
+        Path("/app/templates/imbalance.md"),
+        Path(__file__).resolve().parent / "templates" / "imbalance.md",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return IMBALANCE_TEMPLATE
+
+
 def _get_json(url: str) -> Dict[str, Any]:
     with httpx.Client(timeout=REQUEST_TIMEOUT_S) as client:
         resp = client.get(url)
@@ -102,7 +115,7 @@ def _build_diagnosis(incident_id: str, incident: Dict[str, Any], state_payload: 
             "state.global.ttft_p95_ms",
         ],
     }
-    diagnosis["narrative"] = render_imbalance_summary(diagnosis, IMBALANCE_TEMPLATE)
+    diagnosis["narrative"] = render_imbalance_summary(diagnosis, _resolve_template())
     return diagnosis
 
 
