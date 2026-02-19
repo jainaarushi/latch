@@ -9,7 +9,7 @@ SERVED_MODEL_NAME=${SERVED_MODEL_NAME:-tinyllama}
 GPU_RESOURCE_VALUE=${GPU_RESOURCE_VALUE:-1}
 
 if ! command -v kubectl >/dev/null 2>&1; then
-  echo "kubectl is required"
+  echo "[k8s] kubectl is required"
   exit 1
 fi
 
@@ -25,8 +25,14 @@ if [[ -z "${GPU_RESOURCE_KEY:-}" ]]; then
   fi
 fi
 
-kubectl get ns "${NAMESPACE}" >/dev/null 2>&1 || kubectl create ns "${NAMESPACE}"
+if kubectl get ns "${NAMESPACE}" >/dev/null 2>&1; then
+  echo "[k8s] Namespace ${NAMESPACE} already exists... OK"
+else
+  kubectl create ns "${NAMESPACE}" >/dev/null
+  echo "[k8s] Creating namespace ${NAMESPACE}... OK"
+fi
 
+echo "[vllm] Applying manifests..."
 kubectl -n "${NAMESPACE}" apply -f deploy/vllm/deployment.yaml
 kubectl -n "${NAMESPACE}" set image deployment/vllm vllm="${VLLM_IMAGE}"
 kubectl -n "${NAMESPACE}" scale deployment/vllm --replicas="${REPLICAS}"
@@ -52,17 +58,16 @@ spec:
 EOF
 )"
 
+echo "[vllm] Waiting for rollout..."
 kubectl -n "${NAMESPACE}" rollout status deployment/vllm --timeout=20m
-kubectl -n "${NAMESPACE}" get pods -l app.kubernetes.io/name=vllm -o wide
+kubectl -n "${NAMESPACE}" get pods -l app.kubernetes.io/name=vllm --no-headers \
+  | awk '{printf "  pod/%s   %s   %s\n", $1, $2, $3}'
+
+echo "[vllm] Service: vllm.${NAMESPACE}.svc.cluster.local:8000 ... OK"
+echo "[vllm] GPU resource request: ${GPU_RESOURCE_KEY}=${GPU_RESOURCE_VALUE}"
 
 cat <<MSG
-
-vLLM is up.
-Namespace: ${NAMESPACE}
-Replicas: ${REPLICAS}
-Service: vllm:${NAMESPACE}.svc.cluster.local:8000
-GPU resource request: ${GPU_RESOURCE_KEY}=${GPU_RESOURCE_VALUE}
-
-Test command:
+[vllm] Done.
+Run sanity test:
   make test-infer NAMESPACE=${NAMESPACE} MODEL=${SERVED_MODEL_NAME}
 MSG

@@ -8,22 +8,27 @@ LLMD_INFRA_VERSION=${LLMD_INFRA_VERSION:-v1.3.6}
 ISTIO_VERSION=${ISTIO_VERSION:-1.28.1}
 
 if ! command -v kubectl >/dev/null 2>&1; then
-  echo "kubectl is required"
+  echo "[llm-d] kubectl is required"
   exit 1
 fi
 if ! command -v helm >/dev/null 2>&1; then
-  echo "helm is required"
+  echo "[llm-d] helm is required"
   exit 1
 fi
 
-kubectl get ns "${NAMESPACE}" >/dev/null 2>&1 || kubectl create ns "${NAMESPACE}"
-kubectl get ns istio-system >/dev/null 2>&1 || kubectl create ns istio-system
+if kubectl get ns "${NAMESPACE}" >/dev/null 2>&1; then
+  echo "[k8s] Namespace ${NAMESPACE} already exists... OK"
+else
+  kubectl create ns "${NAMESPACE}" >/dev/null
+  echo "[k8s] Creating namespace ${NAMESPACE}... OK"
+fi
+kubectl get ns istio-system >/dev/null 2>&1 || kubectl create ns istio-system >/dev/null
 
-echo "Applying Gateway API + GAIE CRDs..."
+echo "[llm-d] Applying Gateway API + GAIE CRDs..."
 kubectl apply -k "https://github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.4.0"
 kubectl apply -k "https://github.com/kubernetes-sigs/gateway-api-inference-extension/config/crd?ref=v1.3.0"
 
-echo "Installing Istio gateway provider..."
+echo "[llm-d] Installing Istio gateway provider..."
 helm repo add istio https://istio-release.storage.googleapis.com/charts >/dev/null
 helm repo add llm-d-infra https://llm-d-incubation.github.io/llm-d-infra/ >/dev/null
 helm repo update >/dev/null
@@ -41,7 +46,7 @@ helm upgrade --install istiod istio/istiod \
   --set tag="${ISTIO_VERSION}" \
   --wait
 
-echo "Installing llm-d infra + inference scheduler..."
+echo "[llm-d] Installing infra + scheduler..."
 helm upgrade --install "infra-${RELEASE_POSTFIX}" llm-d-infra/llm-d-infra \
   --version "${LLMD_INFRA_VERSION}" \
   -n "${NAMESPACE}" \
@@ -67,20 +72,21 @@ sed \
   -e "s/gaie-hello/gaie-${RELEASE_POSTFIX}/g" \
   deploy/llmd/httproute.yaml | kubectl -n "${NAMESPACE}" apply -f -
 
-kubectl -n "${NAMESPACE}" rollout status deploy/"infra-${RELEASE_POSTFIX}"-inference-gateway-istio --timeout=10m
-kubectl -n "${NAMESPACE}" rollout status deploy/"gaie-${RELEASE_POSTFIX}"-epp --timeout=10m
+echo "[llm-d] Waiting for gateway + scheduler rollout..."
+kubectl -n "${NAMESPACE}" rollout status deploy/"infra-${RELEASE_POSTFIX}"-inference-gateway-istio --timeout=10m >/dev/null
+kubectl -n "${NAMESPACE}" rollout status deploy/"gaie-${RELEASE_POSTFIX}"-epp --timeout=10m >/dev/null
 
-kubectl -n "${NAMESPACE}" get svc | grep -E "inference-gateway|gaie|vllm" || true
+kubectl -n "${NAMESPACE}" get svc | grep -E "inference-gateway|gaie|vllm" | sed 's/^/[llm-d] /' || true
 
 cat <<MSG
 
-llm-d gateway/scheduler is up in front of vLLM.
-Gateway service:
+[llm-d] Gateway service:
   infra-${RELEASE_POSTFIX}-inference-gateway-istio.${NAMESPACE}.svc.cluster.local:80
 
-Test through llm-d:
+[llm-d] Test through llm-d:
   make test-infer NAMESPACE=${NAMESPACE} SERVICE=infra-${RELEASE_POSTFIX}-inference-gateway-istio PORT=80
 
-Show scheduler logs (backend decisions):
+[llm-d] Show scheduler logs:
   make logs-routing NAMESPACE=${NAMESPACE} RELEASE_POSTFIX=${RELEASE_POSTFIX}
+[llm-d] Done.
 MSG
