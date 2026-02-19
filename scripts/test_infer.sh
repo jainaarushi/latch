@@ -35,9 +35,21 @@ else
 fi
 
 if [[ "${MODEL_FOUND}" != "yes" ]]; then
-  echo "Model '${MODEL}' was not found in /v1/models response:"
-  echo "${MODELS}" | (command -v jq >/dev/null && jq . || cat)
-  exit 1
+  if command -v jq >/dev/null 2>&1; then
+    FALLBACK_MODEL=$(echo "${MODELS}" | jq -r '.data[0].id // empty')
+    if [[ -n "${FALLBACK_MODEL}" ]]; then
+      echo "Model '${MODEL}' not found; using gateway model '${FALLBACK_MODEL}' instead."
+      MODEL="${FALLBACK_MODEL}"
+    else
+      echo "Model '${MODEL}' was not found in /v1/models response:"
+      echo "${MODELS}" | jq .
+      exit 1
+    fi
+  else
+    echo "Model '${MODEL}' was not found in /v1/models response:"
+    echo "${MODELS}"
+    exit 1
+  fi
 fi
 
 RESP=$(curl -sS -X POST "http://127.0.0.1:${LOCAL_PORT}/v1/chat/completions" \

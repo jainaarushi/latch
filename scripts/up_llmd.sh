@@ -63,7 +63,7 @@ sed \
 kubectl -n "${NAMESPACE}" rollout status deploy/"infra-${RELEASE_POSTFIX}"-inference-gateway-istio --timeout=10m
 kubectl -n "${NAMESPACE}" rollout status deploy/"gaie-${RELEASE_POSTFIX}"-epp --timeout=10m
 
-kubectl -n "${NAMESPACE}" get svc | rg "inference-gateway|gaie|vllm" || true
+kubectl -n "${NAMESPACE}" get svc | grep -E "inference-gateway|gaie|vllm" || true
 
 cat <<MSG
 
