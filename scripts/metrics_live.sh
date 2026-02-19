@@ -2,11 +2,18 @@
 set -euo pipefail
 
 NAMESPACE=${NAMESPACE:-phase1full}
+RELEASE_POSTFIX=${RELEASE_POSTFIX:-${NAMESPACE}}
 OBS_NAMESPACE=${OBS_NAMESPACE:-observability}
 PROM_SERVICE=${PROM_SERVICE:-prometheus}
 LOCAL_PORT=${LOCAL_PORT:-19090}
 INTERVAL_S=${INTERVAL_S:-5}
 ITERATIONS=${ITERATIONS:-0}
+GENERATE_TRAFFIC=${GENERATE_TRAFFIC:-false}
+TRAFFIC_SERVICE=${TRAFFIC_SERVICE:-infra-${RELEASE_POSTFIX}-inference-gateway-istio}
+TRAFFIC_PORT=${TRAFFIC_PORT:-80}
+TRAFFIC_LOCAL_PORT=${TRAFFIC_LOCAL_PORT:-18082}
+TRAFFIC_MODEL=${TRAFFIC_MODEL:-tinyllama}
+TRAFFIC_SLEEP_S=${TRAFFIC_SLEEP_S:-0.2}
 
 need_cmd() { command -v "$1" >/dev/null 2>&1; }
 
@@ -40,6 +47,8 @@ kubectl -n "${OBS_NAMESPACE}" port-forward svc/"${PROM_SERVICE}" "${LOCAL_PORT}:
 PF_PID=$!
 cleanup() {
   kill "${PF_PID}" >/dev/null 2>&1 || true
+  kill "${TRAFFIC_PF_PID:-}" >/dev/null 2>&1 || true
+  kill "${TRAFFIC_PID:-}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 sleep 2
@@ -68,6 +77,49 @@ fmt() {
   else
     printf "%.*f" "${p}" "${v}"
   fi
+}
+
+resolve_traffic_model() {
+  local models fallback found
+  models=$(curl -sS "http://127.0.0.1:${TRAFFIC_LOCAL_PORT}/v1/models" || true)
+  found=$(echo "${models}" | jq -e --arg m "${TRAFFIC_MODEL}" '[.data[]?.id] | index($m) != null' >/dev/null 2>&1 && echo yes || echo no)
+  if [[ "${found}" == "yes" ]]; then
+    echo "${TRAFFIC_MODEL}"
+    return
+  fi
+  fallback=$(echo "${models}" | jq -r '.data[0].id // empty')
+  if [[ -n "${fallback}" ]]; then
+    echo "${fallback}"
+    return
+  fi
+  echo "${TRAFFIC_MODEL}"
+}
+
+start_traffic_if_enabled() {
+  if [[ "${GENERATE_TRAFFIC}" != "true" ]]; then
+    return
+  fi
+  echo "[metrics-live] Starting background traffic via svc/${TRAFFIC_SERVICE} (${NAMESPACE})..."
+  kubectl -n "${NAMESPACE}" get svc "${TRAFFIC_SERVICE}" >/dev/null 2>&1
+  kubectl -n "${NAMESPACE}" port-forward svc/"${TRAFFIC_SERVICE}" "${TRAFFIC_LOCAL_PORT}:${TRAFFIC_PORT}" >/tmp/pf-traffic.log 2>&1 &
+  TRAFFIC_PF_PID=$!
+  sleep 2
+
+  local model
+  model=$(resolve_traffic_model)
+  echo "[metrics-live] Traffic model=${model}, interval=${TRAFFIC_SLEEP_S}s"
+
+  (
+    i=0
+    while :; do
+      i=$((i + 1))
+      curl -sS -X POST "http://127.0.0.1:${TRAFFIC_LOCAL_PORT}/v1/chat/completions" \
+        -H 'Content-Type: application/json' \
+        --data "{\"model\":\"${model}\",\"messages\":[{\"role\":\"user\",\"content\":\"metrics live ${i}\"}],\"max_tokens\":32,\"temperature\":0}" >/dev/null 2>&1 || true
+      sleep "${TRAFFIC_SLEEP_S}"
+    done
+  ) &
+  TRAFFIC_PID=$!
 }
 
 print_snapshot() {
@@ -113,6 +165,7 @@ print_snapshot() {
 }
 
 count=0
+start_traffic_if_enabled
 while :; do
   print_snapshot
   count=$((count + 1))

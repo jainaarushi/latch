@@ -28,6 +28,12 @@ NAMESPACE=phase1full make metrics-live
 # INTERVAL_S=2 ITERATIONS=30 NAMESPACE=phase1full make metrics-live
 ```
 
+Generate traffic automatically while printing metrics:
+
+```bash
+NAMESPACE=phase1full ITERATIONS=20 make metrics-live-traffic
+```
+
 ## Scrape Targets
 
 - `job="vllm"`: vLLM pods via `vllm` service on port `8000`
