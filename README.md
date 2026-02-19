@@ -10,7 +10,7 @@ LLM systems break in production because traffic, prompts, and usage patterns cha
 
 This project shows how application intent (latency, cost, priority) can be translated into real-time control decisions that stabilize LLM behavior under load.
 
-## Kubernetes Demo Quickstart (vLLM + llm-d + Observability)
+## LATCH Quickstart
 
 This repo now includes a practical Kubernetes demo path with:
 
