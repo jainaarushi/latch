@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic up-latch-metrics state up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -15,6 +15,8 @@ help:
 	@echo "  make backend-proof - prove llm-d backend selection using per-pod vLLM counters"
 	@echo "  make metrics-live - print live per-pod runtime metrics table"
 	@echo "  make metrics-live-traffic - metrics-live with built-in background traffic"
+	@echo "  make up-latch-metrics - deploy latch metrics normalizer service"
+	@echo "  make state - fetch normalized JSON state from latch-metrics"
 	@echo "  make up      - deploy 2x vLLM pods + service in Kubernetes"
 	@echo "  make up-vllm - same as make up (phase-1 naming)"
 	@echo "  make up-llmd - deploy llm-d gateway+scheduler in front of vLLM"
@@ -68,6 +70,12 @@ metrics-live:
 
 metrics-live-traffic:
 	GENERATE_TRAFFIC=true ./scripts/metrics_live.sh
+
+up-latch-metrics:
+	./scripts/up_latch_metrics.sh
+
+state:
+	./scripts/state.sh
 
 up:
 	./scripts/up.sh
