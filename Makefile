@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic up-latch-metrics state up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load enable-imbalance disable-imbalance up-latch-metrics state up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -15,6 +15,9 @@ help:
 	@echo "  make backend-proof - prove llm-d backend selection using per-pod vLLM counters"
 	@echo "  make metrics-live - print live per-pod runtime metrics table"
 	@echo "  make metrics-live-traffic - metrics-live with built-in background traffic"
+	@echo "  make run-load - run load generator (steady/burst, mixed prompts)"
+	@echo "  make enable-imbalance - inject replica imbalance incident"
+	@echo "  make disable-imbalance - revert replica imbalance incident"
 	@echo "  make up-latch-metrics - deploy latch metrics normalizer service"
 	@echo "  make state - fetch normalized JSON state from latch-metrics"
 	@echo "  make up      - deploy 2x vLLM pods + service in Kubernetes"
@@ -70,6 +73,15 @@ metrics-live:
 
 metrics-live-traffic:
 	GENERATE_TRAFFIC=true ./scripts/metrics_live.sh
+
+run-load:
+	./scripts/run_load.sh
+
+enable-imbalance:
+	./scripts/enable_imbalance.sh
+
+disable-imbalance:
+	./scripts/disable_imbalance.sh
 
 up-latch-metrics:
 	./scripts/up_latch_metrics.sh

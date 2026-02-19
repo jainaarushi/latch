@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: imbalance-scenario
+  namespace: phase1full
+data:
+  mode: route-skew-by-endpoint-membership
+  selector: app.kubernetes.io/name=vllm
+  label_key: llm-d.ai/inference-serving
+  enabled_value: "true"
+  disabled_value: "false"
+  wait_seconds: "20"
+  note: "Enable by setting one pod true and others false for llm-d backend membership."

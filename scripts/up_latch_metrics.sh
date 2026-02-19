@@ -33,6 +33,7 @@ kubectl -n "${NAMESPACE}" apply -f deploy/latch-metrics/deployment.yaml >/dev/nu
 kubectl -n "${NAMESPACE}" set env deploy/latch-metrics \
   TARGET_NAMESPACE="${NAMESPACE}" \
   PROMETHEUS_URL="http://${PROM_SERVICE}.${OBS_NAMESPACE}.svc.cluster.local:9090" >/dev/null
+kubectl -n "${NAMESPACE}" rollout restart deploy/latch-metrics >/dev/null
 
 echo "[latch-metrics] Waiting for Ready..."
 kubectl -n "${NAMESPACE}" rollout status deploy/latch-metrics --timeout=10m >/dev/null
