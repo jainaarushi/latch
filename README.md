@@ -123,6 +123,66 @@ Expected schema:
 For detailed metric names and PromQL, see `docs/metrics.md`.
 For Phase 1 command sequence, see `docs/phase1_runbook.md`.
 
+### 6) Phase 3: Traffic generator + incident injection
+
+Run reproducible load (steady/burst, short/long prompts):
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify \
+SERVICE=infra-latchverify-inference-gateway-istio PORT=80 \
+REQUESTS=120 CONCURRENCY=12 MODE=steady MIXED_PROMPTS=true make run-load
+```
+
+Inject skewed routing (replica imbalance scenario):
+
+```bash
+NAMESPACE=latchverify make enable-imbalance
+```
+
+Revert skew and return to balanced routing:
+
+```bash
+NAMESPACE=latchverify make disable-imbalance
+```
+
+Watch normalized state while load is running:
+
+```bash
+NAMESPACE=latchverify make state
+```
+
+More details:
+- `docs/loadgen.md`
+- `docs/scenarios.md`
+
+## Important File Structure (Quick Map)
+
+```text
+.
+├── Makefile                               # Primary interface: up/test/observe/load/scenario targets
+├── scripts/
+│   ├── up.sh                              # Deploy vLLM replicas + service
+│   ├── up_llmd.sh                         # Deploy llm-d gateway/scheduler in front of vLLM
+│   ├── test_infer.sh                      # OpenAI chat-completions smoke test
+│   ├── run_load.sh                        # Phase 3 synthetic traffic runner
+│   ├── enable_imbalance.sh                # Inject replica imbalance
+│   ├── disable_imbalance.sh               # Revert imbalance
+│   ├── metrics_live.sh                    # Live per-pod runtime metrics view
+│   ├── up_latch_metrics.sh                # Deploy latch-metrics normalizer service
+│   └── state.sh                           # Query normalized GET /state JSON
+├── deploy/
+│   ├── vllm/deployment.yaml               # vLLM K8s deployment/service spec
+│   ├── llmd/httproute.yaml                # Routing into llm-d entrypoint
+│   └── scenarios/imbalance.yaml           # Route-weight skew scenario manifest
+├── services/latch-metrics/main.py         # Normalized cluster-state API implementation
+├── tools/loadgen/loadgen.py               # Load generation engine (steady/burst/mixed prompts)
+└── docs/
+    ├── phase1_runbook.md                  # Verified Phase 1 command sequence
+    ├── metrics.md                         # Metrics definitions and PromQL
+    ├── loadgen.md                         # Load generator usage
+    └── scenarios.md                       # Incident scenario workflow
+```
+
 
 ## Longer-Term Product Diagram (Not MVP)
 
