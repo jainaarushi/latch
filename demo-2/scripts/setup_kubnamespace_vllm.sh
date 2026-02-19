@@ -99,12 +99,18 @@ install_nvidia_container_toolkit() {
 }
 
 install_device_plugin() {
+  log "Resetting NVIDIA device plugin for idempotent setup"
+  kubectl -n kube-system delete ds nvidia-device-plugin-daemonset --ignore-not-found=true >/dev/null || true
+
   log "Applying NVIDIA device plugin"
   kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.4/deployments/static/nvidia-device-plugin.yml >/dev/null
 
-  kubectl -n kube-system patch ds nvidia-device-plugin-daemonset \
-    --type='json' \
-    -p='[{"op":"add","path":"/spec/template/spec/runtimeClassName","value":"nvidia"}]' >/dev/null || true
+  kubectl -n kube-system patch ds nvidia-device-plugin-daemonset --type='json' -p='[{"op":"add","path":"/spec/template/spec/runtimeClassName","value":"nvidia"}]' >/dev/null || \
+  kubectl -n kube-system patch ds nvidia-device-plugin-daemonset --type='json' -p='[{"op":"replace","path":"/spec/template/spec/runtimeClassName","value":"nvidia"}]' >/dev/null
+
+  kubectl -n kube-system set env ds/nvidia-device-plugin-daemonset MIG_STRATEGY=single FAIL_ON_INIT_ERROR=false >/dev/null
+
+  kubectl -n kube-system patch ds nvidia-device-plugin-daemonset --type='json' -p='[{"op":"replace","path":"/spec/template/spec/containers/0/securityContext","value":{"privileged":true,"allowPrivilegeEscalation":true}}]' >/dev/null
 
   kubectl -n kube-system rollout status ds/nvidia-device-plugin-daemonset --timeout=180s >/dev/null
 
