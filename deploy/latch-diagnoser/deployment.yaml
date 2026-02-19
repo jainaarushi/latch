@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: latch-diagnoser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: latch-diagnoser
+  template:
+    metadata:
+      labels:
+        app: latch-diagnoser
+    spec:
+      containers:
+        - name: latch-diagnoser
+          image: python:3.12-slim
+          command: ["/bin/sh", "-lc"]
+          args:
+            - |
+              set -e
+              pip install --no-cache-dir -r /app/requirements.txt
+              exec uvicorn main:app --host 0.0.0.0 --port 8082 --app-dir /app
+          env:
+            - name: DETECTOR_INCIDENTS_URL
+              value: http://latch-detector:8081/incidents
+            - name: METRICS_STATE_URL
+              value: http://latch-metrics:8080/state
+            - name: IMBALANCE_TEMPLATE
+              value: /app/imbalance.md
+            - name: REQUEST_TIMEOUT_S
+              value: "10"
+          ports:
+            - containerPort: 8082
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          volumeMounts:
+            - name: code
+              mountPath: /app
+      volumes:
+        - name: code
+          configMap:
+            name: latch-diagnoser-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: latch-diagnoser
+spec:
+  selector:
+    app: latch-diagnoser
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
