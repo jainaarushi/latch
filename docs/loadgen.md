@@ -5,6 +5,7 @@ Files:
 - `tools/loadgen/loadgen.py`
 - `scripts/run_load.sh`
 - `scripts/compare_scheduler_modes.sh`
+- `scripts/state_live.sh`
 
 ## Modes
 
@@ -53,5 +54,16 @@ The comparison prints, for each mode:
 - load summary (`qps`, `errors`, `p95`, `p99`)
 - per-pod `backend_proof` deltas
 - per-pod `state` snapshot (`qps`, `gpu_util`)
+- state timeline summary from `state_timeline_<mode>.jsonl`
 
 This is for validating scheduler behavior, not fairness. Skew can be expected in locality-friendly mode.
+
+## Capture `/state` timeline
+
+You can also capture repeated snapshots directly:
+
+```bash
+NAMESPACE=kubnamespace INTERVAL_S=2 DURATION_S=120 make state-live
+```
+
+Output is JSONL (one state object per line), useful for detector and diagnosis evidence windows.

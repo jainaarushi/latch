@@ -60,3 +60,11 @@ echo "Recommendation:"
 echo "- $(echo "${RESP}" | jq -r '.recommendation')"
 echo "Risk: $(echo "${RESP}" | jq -r '.risk')"
 echo "Rollback: $(echo "${RESP}" | jq -r '.rollback')"
+echo
+
+echo "Next checks:"
+echo "${RESP}" | jq -r '.next_checks[]? | "- " + .'
+echo
+
+echo "Sources:"
+echo "${RESP}" | jq -r '.sources[]? | "- " + .'

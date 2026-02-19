@@ -184,7 +184,8 @@ DURATION_S=120 CONCURRENCY=16 STEADY_RPS=10 make scheduler-compare
 This runs two back-to-back load profiles and prints:
 - load summary (`qps`, `errors`, `p95`, `p99`)
 - per-pod backend proof deltas
-- optional per-pod `/state` snapshot
+- per-pod `/state` snapshot
+- `/state` timeline summary from JSONL samples
 
 Inject skewed routing (replica imbalance scenario):
 
@@ -202,6 +203,20 @@ Watch normalized state while load is running:
 
 ```bash
 NAMESPACE=latchverify make state
+```
+
+Capture repeated `/state` snapshots as a timeline (JSONL):
+
+```bash
+NAMESPACE=latchverify INTERVAL_S=2 DURATION_S=120 make state-live
+```
+
+Run end-to-end incident demo (baseline -> skew -> detect -> diagnose):
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify \
+SERVICE=infra-latchverify-inference-gateway-istio PORT=80 MODEL=tinyllama \
+make demo-incident
 ```
 
 More details:
@@ -311,6 +326,8 @@ Guardrails:
 │   ├── test_infer.sh                      # OpenAI chat-completions smoke test
 │   ├── run_load.sh                        # Phase 3 synthetic traffic runner
 │   ├── compare_scheduler_modes.sh         # Back-to-back scheduler behavior comparison
+│   ├── state_live.sh                      # Repeated /state polling to JSONL timeline
+│   ├── demo_incident.sh                   # One-command baseline/skew/detect/diagnose run
 │   ├── enable_imbalance.sh                # Inject replica imbalance
 │   ├── disable_imbalance.sh               # Revert imbalance
 │   ├── metrics_live.sh                    # Live per-pod runtime metrics view
