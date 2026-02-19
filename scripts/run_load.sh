@@ -18,6 +18,7 @@ SHORT_USER_TOKENS=${SHORT_USER_TOKENS:-24}
 LONG_USER_TOKENS=${LONG_USER_TOKENS:-400}
 MAX_TOKENS=${MAX_TOKENS:-32}
 TIMEOUT_S=${TIMEOUT_S:-120}
+UNIQUE_PROMPTS=${UNIQUE_PROMPTS:-0}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "[loadgen] kubectl is required"
@@ -46,6 +47,11 @@ trap cleanup EXIT
 sleep 2
 
 echo "[loadgen] Running mode=${MODE} duration=${DURATION_S}s concurrency=${CONCURRENCY}"
+UNIQUE_FLAG=()
+if [[ "${UNIQUE_PROMPTS}" == "1" ]]; then
+  UNIQUE_FLAG=(--unique-prompts)
+fi
+
 python3 tools/loadgen/loadgen.py \
   --endpoint "http://127.0.0.1:${LOCAL_PORT}" \
   --model "${MODEL}" \
@@ -60,4 +66,5 @@ python3 tools/loadgen/loadgen.py \
   --short-user-tokens "${SHORT_USER_TOKENS}" \
   --long-user-tokens "${LONG_USER_TOKENS}" \
   --max-tokens "${MAX_TOKENS}" \
-  --timeout-s "${TIMEOUT_S}"
+  --timeout-s "${TIMEOUT_S}" \
+  "${UNIQUE_FLAG[@]}"
