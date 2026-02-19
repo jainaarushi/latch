@@ -24,6 +24,19 @@ This section documents the core LATCH runtime flow for Kubernetes:
 
 Run `make help` to list all targets.
 
+### 0) From-zero setup (fresh GPU host)
+
+For a brand-new Ubuntu GPU VM (no NVIDIA SDK/tooling preinstalled):
+
+```bash
+make bootstrap-from-zero
+```
+
+This runs host GPU bootstrap, k3s + NVIDIA device plugin setup, then LATCH stack setup.
+It also applies an A100-focused MIG layout and enforces minimum schedulable GPU capacity before deploying vLLM.
+
+Detailed notes: `docs/from_zero_bootstrap.md`
+
 ### 1) Prereqs and cluster checks
 
 ```bash
@@ -252,6 +265,10 @@ Guardrails:
 ├── Makefile                               # Primary interface: up/test/observe/load/scenario targets
 ├── scripts/
 │   ├── up.sh                              # Deploy vLLM replicas + service
+│   ├── bootstrap_gpu_host.sh              # Install host NVIDIA driver + container toolkit
+│   ├── bootstrap_mig_layout.sh            # Apply MIG slice layout (A100-focused defaults)
+│   ├── bootstrap_k8s_gpu.sh               # Install/configure k3s + NVIDIA device plugin
+│   ├── bootstrap_full_from_zero.sh        # Full bare-machine bootstrap wrapper
 │   ├── up_llmd.sh                         # Deploy llm-d gateway/scheduler in front of vLLM
 │   ├── test_infer.sh                      # OpenAI chat-completions smoke test
 │   ├── run_load.sh                        # Phase 3 synthetic traffic runner
@@ -285,7 +302,8 @@ Guardrails:
     ├── loadgen.md                         # Load generator usage
     ├── scenarios.md                       # Incident scenario workflow
     ├── detector.md                        # Detector rule tuning guide
-    └── safety.md                          # Guardrails for diagnosis narrative
+    ├── safety.md                          # Guardrails for diagnosis narrative
+    └── from_zero_bootstrap.md             # Bare-host bootstrap instructions
 ```
 
 
