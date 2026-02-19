@@ -14,6 +14,7 @@ NAMESPACE=latchverify RELEASE_POSTFIX=latchverify make up-llmd
 NAMESPACE=latchverify SERVICE=infra-latchverify-inference-gateway-istio PORT=80 make test-infer
 
 NAMESPACE=latchverify make status
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify make backend-proof
 ```
 
 ## MIG Proof (Mode B)

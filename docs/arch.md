@@ -43,6 +43,9 @@ flowchart LR
   - Service: `infra-kubnamespace-inference-gateway-istio`
   - Port: `80`
   - Command: `make test-infer SERVICE=infra-kubnamespace-inference-gateway-istio PORT=80`
+- Backend selection proof target:
+  - Command: `make backend-proof`
+  - Output: per-vLLM-pod `vllm:request_success_total` before/after deltas
 
 ## MIG Mode Detection
 
