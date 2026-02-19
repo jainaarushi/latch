@@ -33,6 +33,14 @@ NAMESPACE=phase1full make state
 NAMESPACE=phase1full make metrics-live-traffic
 ```
 
+For timeline evidence during/after injection:
+
+```bash
+NAMESPACE=phase1full INTERVAL_S=2 DURATION_S=120 make state-live
+NAMESPACE=phase1full make incidents
+NAMESPACE=phase1full make diagnose INC=<incident_id>
+```
+
 Expected effect:
 
 - one replica shows higher `qps` / queue / in-flight

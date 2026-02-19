@@ -31,6 +31,7 @@ if [[ -z "${KEEP_POD}" ]]; then
 fi
 
 echo "[scenario] Applying route skew: target=${KEEP_POD}, others disabled for llm-d membership..."
+echo "[scenario] Effective behavior: strong skew (single backend membership)."
 for pod in "${pods[@]}"; do
   if [[ "${pod}" == "${KEEP_POD}" ]]; then
     kubectl -n "${NAMESPACE}" label pod "${pod}" "${LABEL_KEY}=true" --overwrite >/dev/null
@@ -47,6 +48,9 @@ if command -v jq >/dev/null 2>&1; then
   echo -e "NAME\tREADY\tLLMD"
   kubectl -n "${NAMESPACE}" get pods -l "${SELECTOR}" -o json \
     | jq -r '.items[] | [.metadata.name, (.status.containerStatuses[0].ready | tostring), (.metadata.labels["llm-d.ai/inference-serving"] // "-")] | @tsv'
+  enabled_count=$(kubectl -n "${NAMESPACE}" get pods -l "${SELECTOR}" -o json | jq '[.items[] | select(.metadata.labels["llm-d.ai/inference-serving"]=="true")] | length')
+  total_count=$(kubectl -n "${NAMESPACE}" get pods -l "${SELECTOR}" -o json | jq '.items | length')
+  echo "[scenario] llm-d serving membership: ${enabled_count}/${total_count} pods enabled"
 else
   kubectl -n "${NAMESPACE}" get pods -l "${SELECTOR}" -o custom-columns=NAME:.metadata.name,READY:.status.containerStatuses[0].ready
 fi
