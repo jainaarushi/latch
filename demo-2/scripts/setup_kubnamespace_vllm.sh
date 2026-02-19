@@ -10,8 +10,8 @@ K3S_CHANNEL="${K3S_CHANNEL:-stable}"
 KILL_LOCAL_VLLM="${KILL_LOCAL_VLLM:-false}"
 LOCAL_VLLM_KILL_PATTERN="${LOCAL_VLLM_KILL_PATTERN:-vllm serve}"
 VLLM_IMAGE="${VLLM_IMAGE:-vllm/vllm-openai:nightly}"
-VLLM_LD_LIBRARY_PATH="${VLLM_LD_LIBRARY_PATH:-/lib/x86_64-linux-gnu}"
-VLLM_LD_PRELOAD="${VLLM_LD_PRELOAD:-/lib/x86_64-linux-gnu/libcuda.so.1}"
+VLLM_LD_LIBRARY_PATH="${VLLM_LD_LIBRARY_PATH:-/usr/lib/x86_64-linux-gnu}"
+VLLM_LD_PRELOAD="${VLLM_LD_PRELOAD:-/usr/lib/x86_64-linux-gnu/libcuda.so.1}"
 
 log() { echo "[setup] $*"; }
 
@@ -147,6 +147,11 @@ metadata:
   name: vllm
   namespace: ${NAMESPACE}
 spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   replicas: ${REPLICAS}
   selector:
     matchLabels:
