@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load enable-imbalance disable-imbalance up-latch-metrics up-latch-detector up-latch-diagnoser state incidents diagnose up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap bootstrap-gpu-host bootstrap-k8s-gpu bootstrap-from-zero full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load enable-imbalance disable-imbalance up-latch-metrics up-latch-detector up-latch-diagnoser state incidents diagnose up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -9,6 +9,9 @@ help:
 	@echo "  make smoke   - run minimal SDK smoke demo"
 	@echo "  make demo    - run the traffic-control demo"
 	@echo "  make bootstrap - install required CLI tools (kubectl, helm, curl, jq)"
+	@echo "  make bootstrap-gpu-host - install NVIDIA driver + container toolkit on host"
+	@echo "  make bootstrap-k8s-gpu - install/configure k3s + NVIDIA device plugin"
+	@echo "  make bootstrap-from-zero - full bare-metal flow (host + k8s + LATCH stack)"
 	@echo "  make full-setup - bootstrap + doctor + vLLM + llm-d + smoke tests"
 	@echo "  make demo-phase1 - run official Phase 1 happy-path sequence"
 	@echo "  make mig-check - print MIG device mapping proof per vLLM pod"
@@ -45,6 +48,15 @@ demo:
 
 bootstrap:
 	./scripts/bootstrap_prereqs.sh
+
+bootstrap-gpu-host:
+	./scripts/bootstrap_gpu_host.sh
+
+bootstrap-k8s-gpu:
+	./scripts/bootstrap_k8s_gpu.sh
+
+bootstrap-from-zero:
+	./scripts/bootstrap_full_from_zero.sh
 
 full-setup:
 	./scripts/full_setup.sh
