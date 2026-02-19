@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap full-setup up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -10,6 +10,8 @@ help:
 	@echo "  make demo    - run the traffic-control demo"
 	@echo "  make bootstrap - install required CLI tools (kubectl, helm, curl, jq)"
 	@echo "  make full-setup - bootstrap + doctor + vLLM + llm-d + smoke tests"
+	@echo "  make demo-phase1 - run official Phase 1 happy-path sequence"
+	@echo "  make mig-check - print MIG device mapping proof per vLLM pod"
 	@echo "  make up      - deploy 2x vLLM pods + service in Kubernetes"
 	@echo "  make up-vllm - same as make up (phase-1 naming)"
 	@echo "  make up-llmd - deploy llm-d gateway+scheduler in front of vLLM"
@@ -34,6 +36,26 @@ bootstrap:
 
 full-setup:
 	./scripts/full_setup.sh
+
+demo-phase1:
+	@NAMESPACE=$${NAMESPACE:-latchverify}; \
+	RELEASE_POSTFIX=$${RELEASE_POSTFIX:-$$NAMESPACE}; \
+	REPLICAS=$${REPLICAS:-2}; \
+	echo "[phase1] Step 1/6: doctor"; \
+	NAMESPACE=$$NAMESPACE ./scripts/doctor.sh; \
+	echo "[phase1] Step 2/6: up-vllm"; \
+	NAMESPACE=$$NAMESPACE REPLICAS=$$REPLICAS ./scripts/up.sh; \
+	echo "[phase1] Step 3/6: direct test"; \
+	NAMESPACE=$$NAMESPACE ./scripts/test_infer.sh; \
+	echo "[phase1] Step 4/6: up-llmd"; \
+	NAMESPACE=$$NAMESPACE RELEASE_POSTFIX=$$RELEASE_POSTFIX ./scripts/up_llmd.sh; \
+	echo "[phase1] Step 5/6: llm-d test"; \
+	NAMESPACE=$$NAMESPACE SERVICE=infra-$$RELEASE_POSTFIX-inference-gateway-istio PORT=80 ./scripts/test_infer.sh; \
+	echo "[phase1] Step 6/6: status"; \
+	NAMESPACE=$$NAMESPACE ./scripts/status.sh
+
+mig-check:
+	./scripts/mig_check.sh
 
 up:
 	./scripts/up.sh
