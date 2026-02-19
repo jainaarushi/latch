@@ -54,6 +54,46 @@ configure_nvidia_runtime() {
   sudo systemctl restart k3s
 }
 
+ensure_standard_cni_paths() {
+  # Some fresh k3s environments report CNI not initialized until standard paths exist.
+  sudo mkdir -p /etc/cni/net.d /opt/cni/bin
+  if [[ -f /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist ]]; then
+    sudo cp -f /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist /etc/cni/net.d/10-flannel.conflist
+  fi
+  for b in bridge bandwidth flannel host-local loopback portmap cni; do
+    if [[ -e "/var/lib/rancher/k3s/data/current/bin/${b}" ]]; then
+      sudo ln -sf "/var/lib/rancher/k3s/data/current/bin/${b}" "/opt/cni/bin/${b}"
+    fi
+  done
+}
+
+wait_for_node_ready() {
+  local node retries=60 sleep_s=5 i
+  node=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+  if [[ -z "${node}" ]]; then
+    log "No node found while waiting for readiness."
+    return 1
+  fi
+
+  for i in $(seq 1 "${retries}"); do
+    if kubectl get node "${node}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep -q True; then
+      return 0
+    fi
+    sleep "${sleep_s}"
+  done
+
+  log "Node ${node} did not become Ready in time."
+  return 1
+}
+
+label_gpu_present() {
+  local node
+  node=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+  if [[ -n "${node}" ]]; then
+    kubectl label node "${node}" nvidia.com/gpu.present=true --overwrite >/dev/null 2>&1 || true
+  fi
+}
+
 ensure_prereqs() {
   ./scripts/bootstrap_prereqs.sh
 }
@@ -66,7 +106,10 @@ install_device_plugin() {
   helm upgrade --install nvdp nvidia/nvidia-device-plugin \
     -n kube-system \
     --set migStrategy="${MIG_STRATEGY}" \
-    --set failOnInitError=false >/dev/null
+    --set failOnInitError=false \
+    --set runtimeClassName=nvidia \
+    --set compatWithCPUManager=true \
+    --set-json tolerations='[{"operator":"Exists"}]' >/dev/null
 
   local ds
   ds=$(kubectl -n kube-system get ds -o name | grep -E 'nvidia-device-plugin' | head -n1 || true)
@@ -147,6 +190,10 @@ main() {
   fi
 
   configure_nvidia_runtime
+  ensure_standard_cni_paths
+  sudo systemctl restart k3s
+  wait_for_node_ready
+  label_gpu_present
   install_device_plugin
   wait_for_gpu_resources
   assert_expected_capacity
