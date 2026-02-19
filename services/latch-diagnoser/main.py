@@ -7,12 +7,14 @@ from typing import Any, Dict, List, Optional
 import httpx
 from fastapi import FastAPI, HTTPException
 
-from llm_summarizer import render_imbalance_summary
+from llm_summarizer import summarize_diagnosis
 
 DETECTOR_INCIDENTS_URL = os.getenv("DETECTOR_INCIDENTS_URL", "http://latch-detector:8081/incidents")
 METRICS_STATE_URL = os.getenv("METRICS_STATE_URL", "http://latch-metrics:8080/state")
 REQUEST_TIMEOUT_S = float(os.getenv("REQUEST_TIMEOUT_S", "10"))
 IMBALANCE_TEMPLATE = Path(os.getenv("IMBALANCE_TEMPLATE", "/app/imbalance.md"))
+DIAGNOSIS_MODE = os.getenv("DIAGNOSIS_MODE", "deterministic")
+LLM_SUMMARIZER_URL = os.getenv("LLM_SUMMARIZER_URL", "")
 
 app = FastAPI(title="latch-diagnoser", version="0.1.0")
 
@@ -115,7 +117,16 @@ def _build_diagnosis(incident_id: str, incident: Dict[str, Any], state_payload: 
             "state.global.ttft_p95_ms",
         ],
     }
-    diagnosis["narrative"] = render_imbalance_summary(diagnosis, _resolve_template())
+    narrative, narrative_mode = summarize_diagnosis(
+        diagnosis=diagnosis,
+        template_path=_resolve_template(),
+        mode=DIAGNOSIS_MODE,
+        llm_summarizer_url=LLM_SUMMARIZER_URL,
+        timeout_s=REQUEST_TIMEOUT_S,
+    )
+    diagnosis["narrative"] = narrative
+    diagnosis["diagnosis_mode"] = DIAGNOSIS_MODE
+    diagnosis["narrative_mode"] = narrative_mode
     return diagnosis
 
 
@@ -126,6 +137,8 @@ def health() -> dict:
         "detector_incidents_url": DETECTOR_INCIDENTS_URL,
         "metrics_state_url": METRICS_STATE_URL,
         "template": str(IMBALANCE_TEMPLATE),
+        "diagnosis_mode": DIAGNOSIS_MODE,
+        "llm_summarizer_url_configured": bool(LLM_SUMMARIZER_URL.strip()),
     }
 
 

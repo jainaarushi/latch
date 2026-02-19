@@ -2,6 +2,8 @@
 set -euo pipefail
 
 NAMESPACE=${NAMESPACE:-phase1full}
+DIAGNOSIS_MODE=${DIAGNOSIS_MODE:-deterministic}
+LLM_SUMMARIZER_URL=${LLM_SUMMARIZER_URL:-}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "[latch-diagnoser] kubectl is required"
@@ -39,7 +41,9 @@ kubectl -n "${NAMESPACE}" create configmap latch-diagnoser-code \
 kubectl -n "${NAMESPACE}" apply -f deploy/latch-diagnoser/deployment.yaml >/dev/null
 kubectl -n "${NAMESPACE}" set env deploy/latch-diagnoser \
   DETECTOR_INCIDENTS_URL="http://latch-detector.${NAMESPACE}.svc.cluster.local:8081/incidents" \
-  METRICS_STATE_URL="http://latch-metrics.${NAMESPACE}.svc.cluster.local:8080/state" >/dev/null
+  METRICS_STATE_URL="http://latch-metrics.${NAMESPACE}.svc.cluster.local:8080/state" \
+  DIAGNOSIS_MODE="${DIAGNOSIS_MODE}" \
+  LLM_SUMMARIZER_URL="${LLM_SUMMARIZER_URL}" >/dev/null
 kubectl -n "${NAMESPACE}" rollout restart deploy/latch-diagnoser >/dev/null
 
 echo "[latch-diagnoser] Waiting for Ready..."
@@ -47,3 +51,4 @@ kubectl -n "${NAMESPACE}" rollout status deploy/latch-diagnoser --timeout=10m >/
 
 echo "[latch-diagnoser] Endpoint: GET /incidents/{id}/diagnosis"
 echo "[latch-diagnoser] Service: latch-diagnoser.${NAMESPACE}.svc.cluster.local:8082"
+echo "[latch-diagnoser] diagnosis_mode=${DIAGNOSIS_MODE}"
