@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load enable-imbalance disable-imbalance up-latch-metrics state up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load enable-imbalance disable-imbalance up-latch-metrics up-latch-detector state incidents up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -19,7 +19,9 @@ help:
 	@echo "  make enable-imbalance - inject replica imbalance incident"
 	@echo "  make disable-imbalance - revert replica imbalance incident"
 	@echo "  make up-latch-metrics - deploy latch metrics normalizer service"
+	@echo "  make up-latch-detector - deploy deterministic incident detector service"
 	@echo "  make state - fetch normalized JSON state from latch-metrics"
+	@echo "  make incidents - fetch active incidents with evidence from latch-detector"
 	@echo "  make up      - deploy 2x vLLM pods + service in Kubernetes"
 	@echo "  make up-vllm - same as make up (phase-1 naming)"
 	@echo "  make up-llmd - deploy llm-d gateway+scheduler in front of vLLM"
@@ -86,8 +88,14 @@ disable-imbalance:
 up-latch-metrics:
 	./scripts/up_latch_metrics.sh
 
+up-latch-detector:
+	./scripts/up_latch_detector.sh
+
 state:
 	./scripts/state.sh
+
+incidents:
+	./scripts/incidents.sh
 
 up:
 	./scripts/up.sh

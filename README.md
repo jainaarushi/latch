@@ -19,6 +19,7 @@ This section documents the core LATCH runtime flow for Kubernetes:
 - Prometheus + DCGM exporter metrics scraping
 - live per-pod metric printing
 - `latch-metrics` normalizer service with `GET /state`
+- deterministic incident detector service with `GET /incidents`
 
 Run `make help` to list all targets.
 
@@ -155,6 +156,40 @@ More details:
 - `docs/loadgen.md`
 - `docs/scenarios.md`
 
+### 7) Phase 4/7: Deterministic detection (`/incidents`)
+
+Deploy detector service:
+
+```bash
+NAMESPACE=latchverify make up-latch-detector
+```
+
+Print active incidents:
+
+```bash
+NAMESPACE=latchverify make incidents
+```
+
+Expected output shape:
+
+```text
+[detector] Active incidents: 1
+- id=inc_0241
+  type=IMBALANCE
+  severity=HIGH
+  started_at=2026-02-18T20:12:07Z
+  evidence:
+    qps_skew=8.0x (threshold=3.0x)
+    ttft_p95_increase=+92% (threshold=+30%)
+```
+
+Detector rule logic:
+- Triggers when `max(replica_qps) / min(replica_qps) > X` for `Y` seconds.
+- Also requires `ttft_p95` increase by `Z%` from baseline.
+- Emits incident object with type, severity, started time, and evidence.
+
+Rule config is externalized in `services/latch-detector/rules.yaml` so you can later replace this deterministic policy with an AI model while keeping the same detector service API and deployment wiring.
+
 ## Important File Structure (Quick Map)
 
 ```text
@@ -169,12 +204,18 @@ More details:
 │   ├── disable_imbalance.sh               # Revert imbalance
 │   ├── metrics_live.sh                    # Live per-pod runtime metrics view
 │   ├── up_latch_metrics.sh                # Deploy latch-metrics normalizer service
-│   └── state.sh                           # Query normalized GET /state JSON
+│   ├── state.sh                           # Query normalized GET /state JSON
+│   ├── up_latch_detector.sh               # Deploy latch-detector service
+│   └── incidents.sh                       # Query and print active incidents
 ├── deploy/
 │   ├── vllm/deployment.yaml               # vLLM K8s deployment/service spec
 │   ├── llmd/httproute.yaml                # Routing into llm-d entrypoint
-│   └── scenarios/imbalance.yaml           # Route-weight skew scenario manifest
+│   ├── scenarios/imbalance.yaml           # Route-weight skew scenario manifest
+│   └── latch-detector/deployment.yaml     # Latch detector deployment/service
 ├── services/latch-metrics/main.py         # Normalized cluster-state API implementation
+├── services/latch-detector/
+│   ├── main.py                            # Deterministic incident detector API
+│   └── rules.yaml                         # Rule thresholds (AI-ready swap point)
 ├── tools/loadgen/loadgen.py               # Load generation engine (steady/burst/mixed prompts)
 └── docs/
     ├── phase1_runbook.md                  # Verified Phase 1 command sequence

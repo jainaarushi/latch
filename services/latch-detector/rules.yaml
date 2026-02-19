@@ -1,0 +1,11 @@
+# Deterministic imbalance detector rules.
+# Kept external so future ML/AI policy can replace or augment this without changing service wiring.
+rules:
+  imbalance:
+    enabled: true
+    min_replicas: 2
+    qps_skew_threshold: 3.0
+    sustained_seconds: 30
+    ttft_p95_increase_pct_threshold: 30.0
+    baseline_window_seconds: 120
+    min_qps_floor: 0.1
