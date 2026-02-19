@@ -1,18 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deploy llm-d inference scheduling on top of Kubernetes with TinyLlama only.
-# Defaults are tuned for a single-node, single-GPU environment.
-
 NAMESPACE="${NAMESPACE:-kubnamespace}"
-LLMD_DIR="${LLMD_DIR:-/home/ubuntu/llm-d}"
-LLMD_REPO="${LLMD_REPO:-git@github.com:llm-d/llm-d.git}"
+RELEASE_NAME_POSTFIX="${RELEASE_NAME_POSTFIX:-inference-scheduling}"
 MODEL="${MODEL:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}"
+MODEL_SIZE="${MODEL_SIZE:-4Gi}"
+DECODE_REPLICAS="${DECODE_REPLICAS:-1}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-512}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.30}"
-DECODE_REPLICAS="${DECODE_REPLICAS:-1}"
+LLMD_DIR="${LLMD_DIR:-$HOME/llm-d}"
+DECODE_IMAGE="${DECODE_IMAGE:-}"
+DECODE_LD_LIBRARY_PATH="${DECODE_LD_LIBRARY_PATH:-/usr/lib/x86_64-linux-gnu}"
+DECODE_LD_PRELOAD="${DECODE_LD_PRELOAD:-/usr/lib/x86_64-linux-gnu/libcuda.so.1}"
+ENABLE_GATEWAY_PREREQS="${ENABLE_GATEWAY_PREREQS:-true}"
 
-log() { echo "[llm-d-setup] $*"; }
+INFER_GUIDE_DIR="${LLMD_DIR}/guides/inference-scheduling"
+GW_PREREQ_DIR="${LLMD_DIR}/guides/prereq/gateway-provider"
+MS_VALUES_FILE="${INFER_GUIDE_DIR}/ms-inference-scheduling/values.yaml"
+GAIE_VALUES_FILE="${INFER_GUIDE_DIR}/gaie-inference-scheduling/values.yaml"
+DECODE_DEPLOY="ms-${RELEASE_NAME_POSTFIX}-llm-d-modelservice-decode"
+
+log() { echo "[llmd-setup] $*"; }
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Missing required command: $1" >&2
+    exit 1
+  }
+}
 
 install_helm() {
   if command -v helm >/dev/null 2>&1; then
@@ -44,55 +59,46 @@ install_helm_diff() {
 
 ensure_llmd_repo() {
   if [[ -d "$LLMD_DIR/.git" ]]; then
-    log "Updating existing llm-d repo"
-    git -C "$LLMD_DIR" fetch --all --prune
-    git -C "$LLMD_DIR" pull --ff-only || true
+    log "llm-d repo present at $LLMD_DIR"
     return
   fi
-  log "Cloning llm-d repo"
-  git clone "$LLMD_REPO" "$LLMD_DIR"
+
+  log "Cloning llm-d repo to $LLMD_DIR"
+  git clone git@github.com:llm-d/llm-d.git "$LLMD_DIR"
 }
 
-apply_tiny_values() {
-  local guide_dir="$LLMD_DIR/guides/inference-scheduling"
+prepare_namespace() {
+  kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE" >/dev/null
+}
 
-  cat > "$guide_dir/gaie-inference-scheduling/values.yaml" <<'YAML'
-inferenceExtension:
-  replicas: 1
-  flags:
-    kv-cache-usage-percentage-metric: "vllm:kv_cache_usage_perc"
-  image:
-    name: llm-d-inference-scheduler
-    hub: ghcr.io/llm-d
-    tag: v0.5.0
-    pullPolicy: Always
-  extProcPort: 9002
-  pluginsConfigFile: "default-plugins.yaml"
-  monitoring:
-    interval: "10s"
-    secret:
-      name: inference-scheduling-gateway-sa-metrics-reader-secret
-    prometheus:
-      enabled: false
-      auth:
-        enabled: false
-inferencePool:
-  targetPorts:
-    - number: 8000
-  modelServerType: vllm
-  modelServers:
-    matchLabels:
-      llm-d.ai/inference-serving: "true"
-      llm-d.ai/guide: "inference-scheduling"
-YAML
+scale_down_direct_vllm() {
+  if kubectl -n "$NAMESPACE" get deploy vllm >/dev/null 2>&1; then
+    log "Scaling direct vllm deployment to 0 to avoid GPU contention"
+    kubectl -n "$NAMESPACE" scale deploy vllm --replicas=0 >/dev/null
+  fi
+}
 
-  cat > "$guide_dir/ms-inference-scheduling/values.yaml" <<YAML
+install_gateway_prereqs() {
+  if [[ "$ENABLE_GATEWAY_PREREQS" != "true" ]]; then
+    log "Skipping gateway prereq installation (ENABLE_GATEWAY_PREREQS=false)"
+    return
+  fi
+
+  log "Installing gateway API/GAIE CRDs and Istio gateway prerequisites"
+  (cd "$GW_PREREQ_DIR" && ./install-gateway-provider-dependencies.sh)
+  (cd "$GW_PREREQ_DIR" && helmfile apply -f istio.helmfile.yaml)
+}
+
+write_values_files() {
+  log "Writing TinyLlama values"
+
+  cat > "$MS_VALUES_FILE" <<YAML
 multinode: false
 
 modelArtifacts:
   uri: "hf://${MODEL}"
   name: "${MODEL}"
-  size: 4Gi
+  size: ${MODEL_SIZE}
   authSecretName: ""
   labels:
     llm-d.ai/inference-serving: "true"
@@ -133,11 +139,11 @@ decode:
           protocol: TCP
       resources:
         limits:
-          cpu: '4'
+          cpu: "4"
           memory: 16Gi
         requests:
-          cpu: '2'
-          memory: 8Gi
+          cpu: "4"
+          memory: 16Gi
       mountModelVolume: true
       volumeMounts:
         - name: metrics-volume
@@ -181,56 +187,69 @@ decode:
 prefill:
   create: false
 YAML
+
+  sed -i 's|enabled: true|enabled: false|g' "$GAIE_VALUES_FILE"
+}
+
+deploy_llmd() {
+  log "Deploying llm-d inference scheduling stack"
+  (cd "$INFER_GUIDE_DIR" && RELEASE_NAME_POSTFIX="$RELEASE_NAME_POSTFIX" helmfile apply -n "$NAMESPACE")
+  kubectl apply -f "$INFER_GUIDE_DIR/httproute.yaml" -n "$NAMESPACE" >/dev/null
+}
+
+resolve_decode_image() {
+  if [[ -n "$DECODE_IMAGE" ]]; then
+    return
+  fi
+
+  if kubectl -n "$NAMESPACE" get deploy vllm >/dev/null 2>&1; then
+    DECODE_IMAGE="$(kubectl -n "$NAMESPACE" get deploy vllm -o jsonpath='{.spec.template.spec.containers[0].image}')"
+  else
+    DECODE_IMAGE="vllm/vllm-openai:nightly"
+  fi
+}
+
+patch_decode_runtime() {
+  resolve_decode_image
+
+  log "Patching decode deployment for A100 stability"
+  kubectl -n "$NAMESPACE" set image "deploy/${DECODE_DEPLOY}" "vllm=${DECODE_IMAGE}" >/dev/null
+
+  kubectl -n "$NAMESPACE" set env "deploy/${DECODE_DEPLOY}" \
+    LD_LIBRARY_PATH="${DECODE_LD_LIBRARY_PATH}" \
+    LD_PRELOAD="${DECODE_LD_PRELOAD}" \
+    VLLM_PORT="8000" >/dev/null
+
+  kubectl -n "$NAMESPACE" patch deploy "${DECODE_DEPLOY}" --type='merge' -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":0,"maxUnavailable":1}},"template":{"spec":{"runtimeClassName":"nvidia","enableServiceLinks":false}}}}' >/dev/null
+
+  kubectl -n "$NAMESPACE" rollout restart "deploy/${DECODE_DEPLOY}" >/dev/null
+  kubectl -n "$NAMESPACE" rollout status "deploy/${DECODE_DEPLOY}" --timeout=1800s >/dev/null
+}
+
+show_status() {
+  log "Current llm-d status"
+  kubectl -n "$NAMESPACE" get deploy "${DECODE_DEPLOY}" || true
+  kubectl -n "$NAMESPACE" get pods -o wide
+  kubectl -n "$NAMESPACE" get svc | grep inference-gateway || true
 }
 
 main() {
+  need_cmd kubectl
+  need_cmd git
   install_helm
   install_helmfile
   install_helm_diff
+
   ensure_llmd_repo
+  prepare_namespace
+  scale_down_direct_vllm
+  install_gateway_prereqs
+  write_values_files
+  deploy_llmd
+  patch_decode_runtime
+  show_status
 
-  # Free GPU for llm-d decode pod.
-  kubectl -n "$NAMESPACE" scale deploy/vllm --replicas=0 >/dev/null 2>&1 || true
-  pkill -f '/home/ubuntu/vllm-venv/bin/vllm serve' || true
-
-  local gw_dir="$LLMD_DIR/guides/prereq/gateway-provider"
-  local sched_dir="$LLMD_DIR/guides/inference-scheduling"
-
-  log "Installing gateway provider dependencies"
-  (cd "$gw_dir" && ./install-gateway-provider-dependencies.sh)
-
-  log "Installing Istio gateway provider"
-  (cd "$gw_dir" && helmfile apply -f istio.helmfile.yaml)
-
-  log "Applying TinyLlama llm-d values"
-  apply_tiny_values
-
-  log "Deploying llm-d inference scheduling stack"
-  (cd "$sched_dir" && helmfile apply -n "$NAMESPACE")
-
-  log "Applying HTTPRoute"
-  (cd "$sched_dir" && kubectl apply -f httproute.yaml -n "$NAMESPACE")
-
-  log "Patching decode deployment for k3s+nvidia runtime and env safety"
-  kubectl -n "$NAMESPACE" patch deploy ms-inference-scheduling-llm-d-modelservice-decode \
-    --type='merge' -p '{"spec":{"template":{"spec":{"runtimeClassName":"nvidia","enableServiceLinks":false}}}}' >/dev/null
-  kubectl -n "$NAMESPACE" set env deploy/ms-inference-scheduling-llm-d-modelservice-decode VLLM_PORT=8000 >/dev/null
-
-  # Single-GPU cleanup: avoid surge pods staying pending.
-  kubectl -n "$NAMESPACE" scale deploy/ms-inference-scheduling-llm-d-modelservice-decode --replicas=0 >/dev/null
-  kubectl -n "$NAMESPACE" rollout status deploy/ms-inference-scheduling-llm-d-modelservice-decode --timeout=300s
-  kubectl -n "$NAMESPACE" scale deploy/ms-inference-scheduling-llm-d-modelservice-decode --replicas="$DECODE_REPLICAS" >/dev/null
-
-  log "Waiting for core llm-d components"
-  kubectl -n "$NAMESPACE" rollout status deploy/infra-inference-scheduling-inference-gateway-istio --timeout=600s
-  kubectl -n "$NAMESPACE" rollout status deploy/gaie-inference-scheduling-epp --timeout=600s
-  kubectl -n "$NAMESPACE" rollout status deploy/ms-inference-scheduling-llm-d-modelservice-decode --timeout=1200s
-
-  log "Done. Current status:"
-  kubectl -n "$NAMESPACE" get deploy
-  kubectl -n "$NAMESPACE" get pods -o wide
-
-  log "Gateway URI: http://infra-inference-scheduling-inference-gateway-istio.${NAMESPACE}.svc.cluster.local"
+  log "Complete. Run traffic with: bash scripts/run_llmd_traffic.sh"
 }
 
 main "$@"

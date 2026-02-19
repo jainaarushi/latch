@@ -1,67 +1,79 @@
-# vLLM K8s Starter
+# vLLM + llm-d K8s Starter (A100)
 
-Reproducible local Kubernetes + NVIDIA + vLLM setup and synthetic traffic runner.
+Reproducible local Kubernetes + NVIDIA + vLLM + llm-d setup for A100.
 
 ## Structure
 
-- `scripts/setup_kubnamespace_vllm.sh`: Bootstrap host + k3s + GPU plugin + deploy vLLM.
-- `scripts/run_synthetic_traffic.sh`: Run in-cluster synthetic traffic and print JSON summary.
-- `profiles/smoke.json`: Small validation profile.
-- `profiles/load.json`: Default load profile.
+- `scripts/setup_kubnamespace_vllm.sh`: bootstrap host + k3s + NVIDIA plugin + deploy direct vLLM.
+- `scripts/setup_a100_mig_3x2g10gb.sh`: enable MIG and carve `3 x 2g.10gb` slices for multi-pod decode.
+- `scripts/setup_llmd_tinyllama.sh`: deploy llm-d inference-scheduling with TinyLlama decode.
+- `scripts/run_synthetic_traffic.sh`: run in-cluster synthetic traffic and print JSON summary.
+- `scripts/run_llmd_traffic.sh`: run synthetic traffic against llm-d inference gateway.
+- `profiles/smoke.json`: small direct vLLM validation profile.
+- `profiles/load.json`: direct vLLM load profile.
+- `profiles/llmd-load.json`: llm-d gateway load profile.
 
-## Quickstart
+## Quickstart (A100 + MIG + llm-d)
 
 ```bash
-# from the repository root
 cd demo-2
+
+# 1) Base host + direct vLLM deployment (single pod)
 bash scripts/setup_kubnamespace_vllm.sh
+
+# 2) Enable MIG and create 3 slices (2g.10gb each)
+# If MIG was newly enabled, script may reboot once. Run it again after reboot.
+bash scripts/setup_a100_mig_3x2g10gb.sh
+
+# 3) Deploy llm-d stack (decode patches + gateway prereqs included)
+bash scripts/setup_llmd_tinyllama.sh
+
+# 4) Scale decode to 3 pods (one pod per MIG slice)
+kubectl -n kubnamespace scale deploy/ms-inference-scheduling-llm-d-modelservice-decode --replicas=3
+kubectl -n kubnamespace rollout status deploy/ms-inference-scheduling-llm-d-modelservice-decode --timeout=1800s
+
+# 5) Run traffic
+bash scripts/run_llmd_traffic.sh
 ```
 
-Verify deployment:
+## Key Defaults
 
-```bash
-kubectl -n kubnamespace get deploy,pods,svc
-```
+`setup_kubnamespace_vllm.sh`
+- `NAMESPACE=kubnamespace`
+- `MODEL=TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+- `REPLICAS=1`
+- `VLLM_IMAGE=vllm/vllm-openai:nightly`
+- `VLLM_LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu`
+- `VLLM_LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libcuda.so.1`
 
-Run smoke traffic:
+`setup_a100_mig_3x2g10gb.sh`
+- `GPU_INDEX=0`
+- `MIG_PROFILE_ID=14` (A100 `2g.10gb`)
+- `MIG_INSTANCES=3`
+- `AUTO_REBOOT=true`
 
-```bash
-bash scripts/run_synthetic_traffic.sh profiles/smoke.json
-```
+`setup_llmd_tinyllama.sh`
+- `NAMESPACE=kubnamespace`
+- `RELEASE_NAME_POSTFIX=inference-scheduling`
+- `MODEL=TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+- `DECODE_REPLICAS=1` (scale to 3 after MIG setup)
+- `DECODE_LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu`
+- `DECODE_LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libcuda.so.1`
+- `ENABLE_GATEWAY_PREREQS=true`
 
-Run load traffic:
+## Repro Notes
 
-```bash
-bash scripts/run_synthetic_traffic.sh profiles/load.json
-```
-
-## Setup Script Options
-
-Environment variables for `scripts/setup_kubnamespace_vllm.sh`:
-
-- `NAMESPACE` (default `kubnamespace`)
-- `MODEL` (default `TinyLlama/TinyLlama-1.1B-Chat-v1.0`)
-- `REPLICAS` (default `2`)
-- `MAX_MODEL_LEN` (default `512`)
-- `GPU_MEMORY_UTILIZATION` (default `0.20`)
-- `K3S_CHANNEL` (default `stable`)
-- `KILL_LOCAL_VLLM` (default `false`)
-- `LOCAL_VLLM_KILL_PATTERN` (default `vllm serve`) used only when `KILL_LOCAL_VLLM=true`
-
-Example:
-
-```bash
-NAMESPACE=kubnamespace \
-REPLICAS=2 \
-MAX_MODEL_LEN=512 \
-GPU_MEMORY_UTILIZATION=0.20 \
-bash scripts/setup_kubnamespace_vllm.sh
-```
+- `:nightly` is floating. For strict reproducibility, pin to digest in both deployments:
+  - `VLLM_IMAGE=vllm/vllm-openai@sha256:...`
+  - `DECODE_IMAGE=vllm/vllm-openai@sha256:...`
+- Decode deployment is patched for stability:
+  - `runtimeClassName: nvidia`
+  - `enableServiceLinks: false` (prevents bad `VLLM_PORT=tcp://...`)
+  - rolling strategy `maxSurge=0,maxUnavailable=1` for single-node GPU constraints.
 
 ## Traffic Profile Fields
 
-All optional (defaults are built into the script):
-
+All optional (defaults built into script):
 - `namespace`
 - `gateway_uri`
 - `model`
@@ -74,4 +86,4 @@ All optional (defaults are built into the script):
 - `start_spacing_ms`
 - `jitter_ms`
 - `timeout_s`
-- `traffic_node_name` (optional node pin for traffic pod)
+- `traffic_node_name`
