@@ -166,8 +166,18 @@ assert_expected_capacity() {
     key=$(pick_detected_key)
   fi
 
-  local count
-  count=$(sum_resource_count "${key}")
+  local retries=24
+  local sleep_s=5
+  local count=0
+  local i
+  for i in $(seq 1 "${retries}"); do
+    count=$(sum_resource_count "${key}")
+    if (( count >= EXPECTED_GPU_RESOURCE_MIN_COUNT )); then
+      break
+    fi
+    sleep "${sleep_s}"
+  done
+
   log "Capacity check: ${key}=${count} (required >= ${EXPECTED_GPU_RESOURCE_MIN_COUNT})"
   if (( count < EXPECTED_GPU_RESOURCE_MIN_COUNT )); then
     log "Insufficient GPU capacity for target replicas."
