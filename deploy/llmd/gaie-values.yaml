@@ -1,0 +1,21 @@
+inferenceExtension:
+  replicas: 1
+  flags:
+    v: 2
+    kv-cache-usage-percentage-metric: "vllm:kv_cache_usage_perc"
+  image:
+    name: llm-d-inference-scheduler
+    hub: ghcr.io/llm-d
+    tag: v0.5.0
+    pullPolicy: IfNotPresent
+  extProcPort: 9002
+  pluginsConfigFile: "default-plugins.yaml"
+
+inferencePool:
+  targetPorts:
+    - number: 8000
+  modelServerType: vllm
+  modelServers:
+    matchLabels:
+      app.kubernetes.io/name: vllm
+      llm-d.ai/inference-serving: "true"
