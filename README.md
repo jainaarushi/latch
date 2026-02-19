@@ -24,6 +24,44 @@ This section documents the core LATCH runtime flow for Kubernetes:
 
 Run `make help` to list all targets.
 
+### 0) From-zero setup (fresh GPU host)
+
+For a brand-new Ubuntu GPU VM (no NVIDIA SDK/tooling preinstalled):
+
+```bash
+make bootstrap-from-zero
+```
+
+This runs host GPU bootstrap, k3s + NVIDIA device plugin setup, then LATCH stack setup.
+It also applies an A100-focused MIG layout and enforces minimum schedulable GPU capacity before deploying vLLM.
+
+Detailed notes: `docs/from_zero_bootstrap.md`
+
+Run this exact sequence next time on a fresh A100 host:
+
+```bash
+git clone git@github.com:jainaarushi/latch.git
+cd latch
+git checkout codex/add-from-zero-bootstrap
+REPLICAS=3 NAMESPACE=kubnamespace RELEASE_POSTFIX=kubnamespace make bootstrap-from-zero
+```
+
+If driver/MIG changes require reboot, continue with:
+
+```bash
+REPLICAS=3 make bootstrap-mig-layout
+REPLICAS=3 EXPECTED_GPU_RESOURCE_MIN_COUNT=3 make bootstrap-k8s-gpu
+REPLICAS=3 NAMESPACE=kubnamespace RELEASE_POSTFIX=kubnamespace make full-setup
+```
+
+Quick validation:
+
+```bash
+NAMESPACE=kubnamespace make doctor
+NAMESPACE=kubnamespace make mig-check
+NAMESPACE=kubnamespace SERVICE=infra-kubnamespace-inference-gateway-istio PORT=80 MODEL=tinyllama make test-infer
+```
+
 ### 1) Prereqs and cluster checks
 
 ```bash
@@ -252,6 +290,10 @@ Guardrails:
 ├── Makefile                               # Primary interface: up/test/observe/load/scenario targets
 ├── scripts/
 │   ├── up.sh                              # Deploy vLLM replicas + service
+│   ├── bootstrap_gpu_host.sh              # Install host NVIDIA driver + container toolkit
+│   ├── bootstrap_mig_layout.sh            # Apply MIG slice layout (A100-focused defaults)
+│   ├── bootstrap_k8s_gpu.sh               # Install/configure k3s + NVIDIA device plugin
+│   ├── bootstrap_full_from_zero.sh        # Full bare-machine bootstrap wrapper
 │   ├── up_llmd.sh                         # Deploy llm-d gateway/scheduler in front of vLLM
 │   ├── test_infer.sh                      # OpenAI chat-completions smoke test
 │   ├── run_load.sh                        # Phase 3 synthetic traffic runner
@@ -285,7 +327,8 @@ Guardrails:
     ├── loadgen.md                         # Load generator usage
     ├── scenarios.md                       # Incident scenario workflow
     ├── detector.md                        # Detector rule tuning guide
-    └── safety.md                          # Guardrails for diagnosis narrative
+    ├── safety.md                          # Guardrails for diagnosis narrative
+    └── from_zero_bootstrap.md             # Bare-host bootstrap instructions
 ```
 
 
