@@ -66,3 +66,6 @@ kubectl -n <ns> get deploy vllm -o yaml | grep -A6 -n "nvidia.com/"
 - Deployment requests `nvidia.com/gpu: 1`
 - Inside pod you may still see `MIG-*` UUIDs via runtime/plugin mapping
 - Slice profile selection is implicit (not controlled by pod resource key)
+
+Note: this cluster currently exposes MIG devices via `nvidia.com/gpu` accounting.
+Validate per-pod MIG binding with `NVIDIA_VISIBLE_DEVICES` and `nvidia-smi -L`.
