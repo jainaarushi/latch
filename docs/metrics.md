@@ -20,6 +20,14 @@ Open Prometheus UI:
 kubectl -n observability port-forward svc/prometheus 9090:9090
 ```
 
+Live per-pod table while traffic runs:
+
+```bash
+NAMESPACE=phase1full make metrics-live
+# optional:
+# INTERVAL_S=2 ITERATIONS=30 NAMESPACE=phase1full make metrics-live
+```
+
 ## Scrape Targets
 
 - `job="vllm"`: vLLM pods via `vllm` service on port `8000`
