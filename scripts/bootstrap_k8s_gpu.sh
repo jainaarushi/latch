@@ -38,7 +38,7 @@ configure_nvidia_runtime() {
 
   local cfg_tmpl="/var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl"
   log "Configuring NVIDIA runtime for containerd"
-  sudo nvidia-ctk runtime configure --runtime=containerd --config "${cfg_tmpl}" || true
+  sudo nvidia-ctk runtime configure --runtime=containerd --config "${cfg_tmpl}"
   sudo systemctl restart k3s
 }
 
@@ -57,6 +57,24 @@ install_device_plugin() {
     --set failOnInitError=false >/dev/null
 
   kubectl -n kube-system rollout status ds/nvdp-nvidia-device-plugin --timeout=5m >/dev/null
+}
+
+wait_for_gpu_resources() {
+  local retries=30
+  local sleep_s=5
+  local i
+
+  for i in $(seq 1 "${retries}"); do
+    if kubectl describe nodes | grep -q "nvidia.com/"; then
+      log "Detected allocatable NVIDIA resources."
+      return 0
+    fi
+    sleep "${sleep_s}"
+  done
+
+  log "No allocatable nvidia.com/* resources detected after ${retries} checks."
+  log "Check: nvidia-smi on host, nvidia runtime config, and k8s-device-plugin logs."
+  return 1
 }
 
 show_gpu_resources() {
@@ -80,6 +98,7 @@ main() {
 
   configure_nvidia_runtime
   install_device_plugin
+  wait_for_gpu_resources
   show_gpu_resources
 
   log "Done. Kubernetes GPU stack is ready."
