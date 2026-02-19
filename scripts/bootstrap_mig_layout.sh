@@ -86,8 +86,15 @@ reset_existing_layout() {
 apply_layout() {
   local profile_id="$1"
   local count="$2"
-  local csv
-  csv=$(yes "${profile_id}" | head -n "${count}" | paste -sd, -)
+  local csv=""
+  local i
+  for i in $(seq 1 "${count}"); do
+    if [[ -z "${csv}" ]]; then
+      csv="${profile_id}"
+    else
+      csv="${csv},${profile_id}"
+    fi
+  done
 
   log "Applying layout: ${count}x profile_id=${profile_id}"
   sudo nvidia-smi mig -i "${GPU_INDEX}" -cgi "${csv}" -C >/dev/null
