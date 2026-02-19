@@ -87,9 +87,6 @@ def state() -> dict:
         running_by_pod = _pod_map(
             _query(client, f'max by (pod) (vllm:num_requests_running{{namespace="{ns}"}})')
         )
-        queue_by_pod = _pod_map(
-            _query(client, f'max by (pod) (vllm:num_requests_waiting{{namespace="{ns}"}})')
-        )
 
         gpu_mem_by_pod = _pod_map(
             _query(
@@ -140,9 +137,6 @@ def state() -> dict:
                 ),
             )
         )
-        global_queue = _scalar(
-            _query(client, f'sum(vllm:num_requests_waiting{{namespace="{ns}"}})')
-        )
 
     pod_names = sorted(
         set(qps_by_pod)
@@ -160,7 +154,6 @@ def state() -> dict:
                 "name": pod,
                 "qps": round(qps_by_pod.get(pod, 0.0), 3),
                 "in_flight": round(running_by_pod.get(pod, 0.0), 3),
-                "queue": round(queue_by_pod.get(pod, 0.0), 3),
                 "ttft_p95_ms": round(ttft_p95_by_pod.get(pod, 0.0), 3),
                 "latency_p95_ms": round(latency_p95_by_pod.get(pod, 0.0), 3),
                 "gpu_util": round(gpu_util_by_pod.get(pod, 0.0), 3),
@@ -174,7 +167,6 @@ def state() -> dict:
             "qps": round(global_qps, 3),
             "ttft_p95_ms": round(global_ttft_p95_ms, 3),
             "latency_p95_ms": round(global_latency_p95_ms, 3),
-            "queue": round(global_queue, 3),
         },
         "replicas": replicas,
     }
