@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -28,6 +29,7 @@ class ImbalanceRule:
     ttft_p95_increase_pct_threshold: float
     baseline_window_seconds: int
     min_qps_floor: float
+    zero_qps_epsilon: float
 
 
 class DetectorState:
@@ -51,6 +53,7 @@ class DetectorState:
             ttft_p95_increase_pct_threshold=float(cfg.get("ttft_p95_increase_pct_threshold", 30.0)),
             baseline_window_seconds=int(cfg.get("baseline_window_seconds", 120)),
             min_qps_floor=float(cfg.get("min_qps_floor", 0.1)),
+            zero_qps_epsilon=float(cfg.get("zero_qps_epsilon", 0.001)),
         )
 
     def _iso(self, ts: float) -> str:
@@ -62,14 +65,18 @@ class DetectorState:
         )
 
     def _compute_skew(self, replicas: List[dict]) -> Optional[float]:
-        qps_values = [float(r.get("qps", 0.0)) for r in replicas if float(r.get("qps", 0.0)) >= self.rules.min_qps_floor]
-        if len(qps_values) < self.rules.min_replicas:
+        all_qps = [float(r.get("qps", 0.0)) for r in replicas]
+        if len(all_qps) < self.rules.min_replicas:
             return None
-        min_qps = min(qps_values)
-        max_qps = max(qps_values)
-        if min_qps <= 0:
+
+        max_qps = max(all_qps)
+        if max_qps < self.rules.min_qps_floor:
             return None
-        return max_qps / min_qps
+
+        min_qps = min(all_qps)
+        # If one replica is effectively idle while another is active, treat as extreme skew.
+        denominator = max(min_qps, self.rules.zero_qps_epsilon)
+        return max_qps / denominator
 
     def _update_baseline(self, ttft_ms: float, now: float) -> float:
         if ttft_ms > 0:
@@ -107,7 +114,7 @@ class DetectorState:
 
         ttft_increase_pct = ((ttft_p95_ms - baseline_ttft_ms) / baseline_ttft_ms) * 100.0
         skew_breached = skew > self.rules.qps_skew_threshold
-        ttft_breached = ttft_increase_pct > self.rules.ttft_p95_increase_pct_threshold
+        ttft_breached = ttft_increase_pct >= self.rules.ttft_p95_increase_pct_threshold
 
         if skew_breached and ttft_breached:
             if self.first_breach_at is None:
@@ -148,12 +155,30 @@ class DetectorState:
 
 
 STATE = DetectorState()
+STOP_EVENT = threading.Event()
+POLL_THREAD: Optional[threading.Thread] = None
+
+
+def _poll_loop() -> None:
+    while not STOP_EVENT.is_set():
+        STATE.poll_once()
+        STOP_EVENT.wait(max(POLL_INTERVAL_S, 0.5))
 
 
 @app.on_event("startup")
 def startup() -> None:
-    # perform one initial evaluation so /incidents has data quickly
+    global POLL_THREAD
+    # Perform one initial evaluation so /incidents has data quickly, then keep polling in background.
     STATE.poll_once()
+    POLL_THREAD = threading.Thread(target=_poll_loop, name="latch-detector-poller", daemon=True)
+    POLL_THREAD.start()
+
+
+@app.on_event("shutdown")
+def shutdown() -> None:
+    STOP_EVENT.set()
+    if POLL_THREAD is not None:
+        POLL_THREAD.join(timeout=2)
 
 
 @app.get("/health")
@@ -168,7 +193,6 @@ def health() -> dict:
 
 @app.get("/incidents")
 def incidents() -> dict:
-    STATE.poll_once()
     active: List[dict] = []
     if STATE.active_incident is not None:
         active = [STATE.active_incident]

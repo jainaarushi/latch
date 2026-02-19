@@ -83,7 +83,7 @@ kill "${PF_PID}" >/dev/null 2>&1 || true
 INC_ID="$(jq -r '.active[0].id // empty' "${INCIDENTS_RAW}" 2>/dev/null || true)"
 if [[ -n "${INC_ID}" ]]; then
   echo "[demo-incident] Step 6/6: diagnose ${INC_ID}"
-  NAMESPACE="${NAMESPACE}" INC="${INC_ID}" ./scripts/diagnose.sh || true
+  NAMESPACE="${NAMESPACE}" SERVICE=latch-diagnoser PORT=8082 INC="${INC_ID}" LOCAL_PORT=18292 ./scripts/diagnose.sh || true
 else
   echo "[demo-incident] Step 6/6: no active incident yet (try longer incident duration or higher skew)"
 fi
