@@ -54,12 +54,19 @@ assert_gpu_model() {
 
 find_profile_id() {
   local profile_name="$1"
-  # Parse first numeric token with trailing ":" on a matching profile line.
+  # Parse profile table rows like:
+  # |   0  MIG 2g.10gb         14     3/3 ...
   nvidia-smi mig -i "${GPU_INDEX}" -lgip \
     | awk -v p="${profile_name}" '
-      /GPU instance profile/ && $0 ~ p {
-        for (i=1;i<=NF;i++) {
-          if ($i ~ /^[0-9]+:$/) { gsub(/:/, "", $i); print $i; exit }
+      $0 ~ /\|/ && $0 ~ /MIG/ && $0 ~ p {
+        # Expected token order includes: "|" GPU_INDEX "MIG" PROFILE_NAME PROFILE_ID ...
+        for (i=1; i<=NF; i++) {
+          if ($i == "MIG" && (i+2) <= NF) {
+            if ($(i+1) == p && $(i+2) ~ /^[0-9]+$/) {
+              print $(i+2)
+              exit
+            }
+          }
         }
       }
     '
