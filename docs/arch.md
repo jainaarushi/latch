@@ -20,6 +20,19 @@ flowchart LR
 - llm-d scheduler (InferencePool) values: `deploy/llmd/gaie-values.yaml` used by `scripts/up_llmd.sh` with `oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool`.
 - HTTPRoute: `deploy/llmd/httproute.yaml` applied by `scripts/up_llmd.sh`.
 
+## One-Command Flow
+
+- Install required CLI tools (`kubectl`, `helm`, `curl`, `jq`):
+  - Command: `make bootstrap`
+- Run the full setup end-to-end:
+  - Command: `make full-setup`
+- Manual phase-by-phase flow:
+  - `make doctor`
+  - `make up-vllm`
+  - `make test-infer`
+  - `make up-llmd`
+  - `make test-infer SERVICE=infra-kubnamespace-inference-gateway-istio PORT=80`
+
 ## Test Defaults
 
 - Direct vLLM test target:
@@ -27,9 +40,9 @@ flowchart LR
   - Port: `8000`
   - Command: `make test-infer`
 - llm-d gateway test target:
-  - Service: `infra-hello-inference-gateway-istio`
+  - Service: `infra-kubnamespace-inference-gateway-istio`
   - Port: `80`
-  - Command: `make test-infer SERVICE=infra-hello-inference-gateway-istio PORT=80`
+  - Command: `make test-infer SERVICE=infra-kubnamespace-inference-gateway-istio PORT=80`
 
 ## MIG Mode Detection
 
