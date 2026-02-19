@@ -19,7 +19,14 @@ need_sudo() {
   fi
 }
 
+ensure_kubeconfig_env() {
+  if [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
+    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  fi
+}
+
 install_k3s_if_needed() {
+  ensure_kubeconfig_env
   if kubectl cluster-info >/dev/null 2>&1; then
     log "Kubernetes context already reachable; skipping k3s install."
     return
@@ -32,6 +39,7 @@ install_k3s_if_needed() {
 
   log "Installing k3s"
   curl -sfL https://get.k3s.io | sudo INSTALL_K3S_EXEC='--write-kubeconfig-mode 644' sh -
+  ensure_kubeconfig_env
 }
 
 configure_nvidia_runtime() {
@@ -55,12 +63,18 @@ install_device_plugin() {
   helm repo add nvidia https://nvidia.github.io/k8s-device-plugin >/dev/null 2>&1 || true
   helm repo update >/dev/null
 
-  helm upgrade --install nvdp nvidia/k8s-device-plugin \
+  helm upgrade --install nvdp nvidia/nvidia-device-plugin \
     -n kube-system \
     --set migStrategy="${MIG_STRATEGY}" \
     --set failOnInitError=false >/dev/null
 
-  kubectl -n kube-system rollout status ds/nvdp-nvidia-device-plugin --timeout=5m >/dev/null
+  local ds
+  ds=$(kubectl -n kube-system get ds -o name | grep -E 'nvidia-device-plugin' | head -n1 || true)
+  if [[ -z "${ds}" ]]; then
+    log "Failed to find NVIDIA device-plugin DaemonSet after helm install."
+    exit 1
+  fi
+  kubectl -n kube-system rollout status "${ds}" --timeout=5m >/dev/null
 }
 
 wait_for_gpu_resources() {
@@ -121,12 +135,11 @@ assert_expected_capacity() {
 
 main() {
   need_sudo
+  ensure_kubeconfig_env
   ensure_prereqs
   install_k3s_if_needed
 
-  if [[ -f /etc/rancher/k3s/k3s.yaml ]]; then
-    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-  fi
+  ensure_kubeconfig_env
 
   if ! kubectl cluster-info >/dev/null 2>&1; then
     log "Cluster is still not reachable after k3s setup."
