@@ -190,6 +190,9 @@ Detector rule logic:
 
 Rule config is externalized in `services/latch-detector/rules.yaml` so you can later replace this deterministic policy with an AI model while keeping the same detector service API and deployment wiring.
 
+Detector tuning guide:
+- `docs/detector.md`
+
 ## Important File Structure (Quick Map)
 
 ```text
@@ -221,7 +224,8 @@ Rule config is externalized in `services/latch-detector/rules.yaml` so you can l
     ├── phase1_runbook.md                  # Verified Phase 1 command sequence
     ├── metrics.md                         # Metrics definitions and PromQL
     ├── loadgen.md                         # Load generator usage
-    └── scenarios.md                       # Incident scenario workflow
+    ├── scenarios.md                       # Incident scenario workflow
+    └── detector.md                        # Detector rule tuning guide
 ```
 
 
