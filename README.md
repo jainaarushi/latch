@@ -202,6 +202,20 @@ Deploy diagnoser:
 NAMESPACE=latchverify make up-latch-diagnoser
 ```
 
+Use deterministic mode (default):
+
+```bash
+NAMESPACE=latchverify DIAGNOSIS_MODE=deterministic make up-latch-diagnoser
+```
+
+Enable LLM formatting mode (with deterministic fallback):
+
+```bash
+NAMESPACE=latchverify DIAGNOSIS_MODE=llm \
+LLM_SUMMARIZER_URL=http://your-summarizer.your-ns.svc.cluster.local/summarize \
+make up-latch-diagnoser
+```
+
 Run diagnosis:
 
 ```bash
@@ -262,7 +276,7 @@ Guardrails:
 │   └── rules.yaml                         # Rule thresholds (AI-ready swap point)
 ├── services/latch-diagnoser/
 │   ├── main.py                            # Diagnosis endpoint with root-cause logic
-│   ├── llm_summarizer.py                  # Guardrailed fact-only narrative formatter
+│   ├── llm_summarizer.py                  # deterministic|llm narrative mode with safe fallback
 │   └── templates/imbalance.md             # Human-readable diagnosis template
 ├── tools/loadgen/loadgen.py               # Load generation engine (steady/burst/mixed prompts)
 └── docs/

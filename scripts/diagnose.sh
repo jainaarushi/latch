@@ -46,6 +46,8 @@ sleep 2
 RESP=$(curl -fsS "http://127.0.0.1:${LOCAL_PORT}/incidents/${INC}/diagnosis")
 
 echo "[diagnosis] Incident $(echo "${RESP}" | jq -r '.incident_id')"
+echo "Diagnosis mode: $(echo "${RESP}" | jq -r '.diagnosis_mode // \"deterministic\"')"
+echo "Narrative mode: $(echo "${RESP}" | jq -r '.narrative_mode // \"deterministic\"')"
 echo "Root cause: $(echo "${RESP}" | jq -r '.root_cause')"
 echo "Confidence: $(echo "${RESP}" | jq -r '.confidence')"
 echo

@@ -30,6 +30,10 @@ spec:
               value: /app/imbalance.md
             - name: REQUEST_TIMEOUT_S
               value: "10"
+            - name: DIAGNOSIS_MODE
+              value: deterministic
+            - name: LLM_SUMMARIZER_URL
+              value: ""
           ports:
             - containerPort: 8082
               name: http
