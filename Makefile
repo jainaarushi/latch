@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap full-setup demo-phase1 mig-check backend-proof up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -12,6 +12,7 @@ help:
 	@echo "  make full-setup - bootstrap + doctor + vLLM + llm-d + smoke tests"
 	@echo "  make demo-phase1 - run official Phase 1 happy-path sequence"
 	@echo "  make mig-check - print MIG device mapping proof per vLLM pod"
+	@echo "  make backend-proof - prove llm-d backend selection using per-pod vLLM counters"
 	@echo "  make up      - deploy 2x vLLM pods + service in Kubernetes"
 	@echo "  make up-vllm - same as make up (phase-1 naming)"
 	@echo "  make up-llmd - deploy llm-d gateway+scheduler in front of vLLM"
@@ -56,6 +57,9 @@ demo-phase1:
 
 mig-check:
 	./scripts/mig_check.sh
+
+backend-proof:
+	./scripts/backend_proof.sh
 
 up:
 	./scripts/up.sh
