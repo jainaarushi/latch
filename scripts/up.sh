@@ -10,6 +10,12 @@ GPU_RESOURCE_VALUE=${GPU_RESOURCE_VALUE:-1}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "[k8s] kubectl is required"
+  echo "[k8s] Run: make bootstrap"
+  exit 1
+fi
+if ! kubectl cluster-info >/dev/null 2>&1; then
+  echo "[k8s] kubectl context/cluster is not reachable"
+  echo "[k8s] Configure kubeconfig, then retry."
   exit 1
 fi
 

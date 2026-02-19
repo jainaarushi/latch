@@ -14,10 +14,16 @@ COMPLETION_WAIT_INTERVAL_S=${COMPLETION_WAIT_INTERVAL_S:-2}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "[infer] kubectl is required"
+  echo "[infer] Run: make bootstrap"
   exit 1
 fi
 if ! command -v curl >/dev/null 2>&1; then
   echo "[infer] curl is required"
+  exit 1
+fi
+if ! kubectl cluster-info >/dev/null 2>&1; then
+  echo "[infer] kubectl context/cluster is not reachable"
+  echo "[infer] Configure kubeconfig, then retry."
   exit 1
 fi
 

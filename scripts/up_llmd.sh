@@ -2,17 +2,24 @@
 set -euo pipefail
 
 NAMESPACE=${NAMESPACE:-kubnamespace}
-RELEASE_POSTFIX=${RELEASE_POSTFIX:-hello}
+RELEASE_POSTFIX=${RELEASE_POSTFIX:-${NAMESPACE}}
 GAIE_VERSION=${GAIE_VERSION:-v1.3.0}
 LLMD_INFRA_VERSION=${LLMD_INFRA_VERSION:-v1.3.6}
 ISTIO_VERSION=${ISTIO_VERSION:-1.28.1}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "[llm-d] kubectl is required"
+  echo "[llm-d] Run: make bootstrap"
   exit 1
 fi
 if ! command -v helm >/dev/null 2>&1; then
   echo "[llm-d] helm is required"
+  echo "[llm-d] Run: make bootstrap"
+  exit 1
+fi
+if ! kubectl cluster-info >/dev/null 2>&1; then
+  echo "[llm-d] kubectl context/cluster is not reachable"
+  echo "[llm-d] Configure kubeconfig, then retry."
   exit 1
 fi
 

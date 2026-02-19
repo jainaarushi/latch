@@ -5,9 +5,10 @@ NAMESPACE=${NAMESPACE:-kubnamespace}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "[doctor] Checking kubectl... FAIL (not found)"
+  echo "[doctor] Run: make bootstrap"
   exit 1
 fi
-KVER=$(kubectl version --client --short 2>/dev/null | head -n1 | sed 's/Client Version: //')
+KVER=$(kubectl version --client -o yaml 2>/dev/null | awk '/gitVersion:/{print $2; exit}' || true)
 echo "[doctor] Checking kubectl... OK (${KVER:-installed})"
 
 if command -v helm >/dev/null 2>&1; then
@@ -21,7 +22,14 @@ CTX=$(kubectl config current-context 2>/dev/null || true)
 if [[ -n "${CTX}" ]]; then
   echo "[doctor] Checking cluster access... OK (context: ${CTX})"
 else
-  echo "[doctor] Checking cluster access... FAIL"
+  echo "[doctor] Checking cluster access... FAIL (no current context)"
+  echo "[doctor] Set kubeconfig/context, then retry."
+  exit 1
+fi
+
+if ! kubectl cluster-info >/dev/null 2>&1; then
+  echo "[doctor] Checking API server reachability... FAIL (context set, server unreachable)"
+  echo "[doctor] Verify cluster is running and kubeconfig points to it."
   exit 1
 fi
 
