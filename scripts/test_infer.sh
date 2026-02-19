@@ -28,7 +28,13 @@ trap cleanup EXIT
 sleep 3
 
 MODELS=$(curl -sS "http://127.0.0.1:${LOCAL_PORT}/v1/models")
-if ! echo "${MODELS}" | rg -q "\"${MODEL}\""; then
+if command -v jq >/dev/null 2>&1; then
+  MODEL_FOUND=$(echo "${MODELS}" | jq -e --arg m "${MODEL}" '[.data[]?.id] | index($m) != null' >/dev/null && echo yes || echo no)
+else
+  MODEL_FOUND=$(echo "${MODELS}" | grep -Fq "\"${MODEL}\"" && echo yes || echo no)
+fi
+
+if [[ "${MODEL_FOUND}" != "yes" ]]; then
   echo "Model '${MODEL}' was not found in /v1/models response:"
   echo "${MODELS}" | (command -v jq >/dev/null && jq . || cat)
   exit 1
@@ -40,7 +46,13 @@ RESP=$(curl -sS -X POST "http://127.0.0.1:${LOCAL_PORT}/v1/chat/completions" \
 
 echo "${RESP}" | (command -v jq >/dev/null && jq . || cat)
 
-if echo "${RESP}" | rg -q '"choices"'; then
+if command -v jq >/dev/null 2>&1; then
+  HAS_CHOICES=$(echo "${RESP}" | jq -e '.choices | type == "array" and length > 0' >/dev/null && echo yes || echo no)
+else
+  HAS_CHOICES=$(echo "${RESP}" | grep -Fq '"choices"' && echo yes || echo no)
+fi
+
+if [[ "${HAS_CHOICES}" == "yes" ]]; then
   echo ""
   echo "PASS: valid OpenAI-style response returned from ${SERVICE}."
 else
