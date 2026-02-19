@@ -6,12 +6,23 @@ REPLICAS=${REPLICAS:-2}
 VLLM_IMAGE=${VLLM_IMAGE:-vllm/vllm-openai:nightly}
 MODEL=${MODEL:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}
 SERVED_MODEL_NAME=${SERVED_MODEL_NAME:-tinyllama}
-GPU_RESOURCE_KEY=${GPU_RESOURCE_KEY:-nvidia.com/mig-2g.10gb}
 GPU_RESOURCE_VALUE=${GPU_RESOURCE_VALUE:-1}
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "kubectl is required"
   exit 1
+fi
+
+# Auto-detect GPU resource key if caller did not set one.
+# Prefer an allocatable MIG resource, else fall back to nvidia.com/gpu.
+if [[ -z "${GPU_RESOURCE_KEY:-}" ]]; then
+  GPU_RESOURCE_KEY=$(
+    kubectl get nodes -o go-template='{{range .items}}{{range $k,$v := .status.allocatable}}{{printf "%s=%s\n" $k $v}}{{end}}{{end}}' \
+      | awk -F= '/^nvidia.com\/mig-/ && $2 != "0" { print $1; exit }'
+  )
+  if [[ -z "${GPU_RESOURCE_KEY}" ]]; then
+    GPU_RESOURCE_KEY="nvidia.com/gpu"
+  fi
 fi
 
 kubectl get ns "${NAMESPACE}" >/dev/null 2>&1 || kubectl create ns "${NAMESPACE}"
@@ -23,21 +34,21 @@ kubectl -n "${NAMESPACE}" patch deployment vllm --type='json' -p "[
   {\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/args/1\",\"value\":\"${MODEL}\"},
   {\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/args/3\",\"value\":\"${SERVED_MODEL_NAME}\"}
 ]"
-kubectl -n "${NAMESPACE}" patch deployment vllm --type='merge' -p "$(cat <<EOF
+kubectl -n "${NAMESPACE}" patch deployment vllm --type='strategic' -p "$(cat <<EOF
 spec:
   template:
     spec:
       containers:
-      - name: vllm
-        resources:
-          requests:
-            cpu: "4"
-            memory: 16Gi
-            ${GPU_RESOURCE_KEY}: "${GPU_RESOURCE_VALUE}"
-          limits:
-            cpu: "8"
-            memory: 24Gi
-            ${GPU_RESOURCE_KEY}: "${GPU_RESOURCE_VALUE}"
+        - name: vllm
+          resources:
+            requests:
+              cpu: "4"
+              memory: 16Gi
+              ${GPU_RESOURCE_KEY}: "${GPU_RESOURCE_VALUE}"
+            limits:
+              cpu: "8"
+              memory: 24Gi
+              ${GPU_RESOURCE_KEY}: "${GPU_RESOURCE_VALUE}"
 EOF
 )"
 
