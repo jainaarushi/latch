@@ -10,6 +10,119 @@ LLM systems break in production because traffic, prompts, and usage patterns cha
 
 This project shows how application intent (latency, cost, priority) can be translated into real-time control decisions that stabilize LLM behavior under load.
 
+## Kubernetes Demo Quickstart (vLLM + llm-d + Observability)
+
+This repo now includes a practical Kubernetes demo path with:
+
+- vLLM replicas on NVIDIA GPU/MIG
+- llm-d gateway + scheduler in front of vLLM
+- Prometheus + DCGM exporter metrics scraping
+- live per-pod metric printing
+- `latch-metrics` normalizer service with `GET /state`
+
+Run `make help` to list all targets.
+
+### 1) Prereqs and cluster checks
+
+```bash
+make bootstrap
+make doctor
+```
+
+### 2) Phase 1: Inference stack
+
+```bash
+NAMESPACE=latchverify REPLICAS=2 make up-vllm
+NAMESPACE=latchverify make test-infer
+
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify make up-llmd
+NAMESPACE=latchverify SERVICE=infra-latchverify-inference-gateway-istio PORT=80 make test-infer
+
+NAMESPACE=latchverify make status
+```
+
+One-command happy path:
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify REPLICAS=2 make demo-phase1
+```
+
+### 3) Routing and MIG proof commands
+
+Backend routing proof through llm-d (per-pod request counter deltas):
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify make backend-proof
+```
+
+MIG UUID proof per vLLM pod:
+
+```bash
+NAMESPACE=latchverify make mig-check
+```
+
+### 4) Phase 2: Observability
+
+Deploy observability components:
+
+```bash
+kubectl apply -f deploy/observability/dcgm-exporter.yaml
+kubectl apply -f deploy/observability/prometheus.yaml
+```
+
+Live per-pod metrics table:
+
+```bash
+NAMESPACE=latchverify make metrics-live
+```
+
+Live per-pod metrics with built-in traffic generation:
+
+```bash
+NAMESPACE=latchverify INTERVAL_S=2 ITERATIONS=20 make metrics-live-traffic
+```
+
+### 5) Phase 2: Latch metrics normalizer (`/state`)
+
+Deploy normalizer service:
+
+```bash
+NAMESPACE=latchverify make up-latch-metrics
+```
+
+Fetch normalized state JSON:
+
+```bash
+NAMESPACE=latchverify make state
+```
+
+Expected schema:
+
+```json
+{
+  "timestamp": "2026-02-19T06:45:53Z",
+  "global": {
+    "qps": 1.234,
+    "ttft_p95_ms": 19.5,
+    "latency_p95_ms": 285.0
+  },
+  "replicas": [
+    {
+      "name": "vllm-...",
+      "qps": 0.411,
+      "in_flight": 1.0,
+      "ttft_p95_ms": 20.2,
+      "latency_p95_ms": 290.0,
+      "gpu_util": 35.0,
+      "gpu_mem_mb": 6605.0
+    }
+  ]
+}
+```
+
+For detailed metric names and PromQL, see `docs/metrics.md`.
+For Phase 1 command sequence, see `docs/phase1_runbook.md`.
+
 
 ## Longer-Term Product Diagram (Not MVP)
 
