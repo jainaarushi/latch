@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="$HOME/.local/bin:$PATH"
+
 MIG_STRATEGY=${MIG_STRATEGY:-single}
 INSTALL_K3S=${INSTALL_K3S:-true}
 EXPECTED_GPU_RESOURCE_KEY=${EXPECTED_GPU_RESOURCE_KEY:-}
