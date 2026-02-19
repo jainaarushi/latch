@@ -173,6 +173,19 @@ SERVICE=infra-latchverify-inference-gateway-istio PORT=80 \
 REQUESTS=120 CONCURRENCY=12 MODE=steady MIXED_PROMPTS=true make run-load
 ```
 
+Run scheduler behavior comparison (locality-friendly vs diverse prompts):
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify \
+SERVICE=infra-latchverify-inference-gateway-istio PORT=80 MODEL=tinyllama \
+DURATION_S=120 CONCURRENCY=16 STEADY_RPS=10 make scheduler-compare
+```
+
+This runs two back-to-back load profiles and prints:
+- load summary (`qps`, `errors`, `p95`, `p99`)
+- per-pod backend proof deltas
+- optional per-pod `/state` snapshot
+
 Inject skewed routing (replica imbalance scenario):
 
 ```bash
@@ -297,6 +310,7 @@ Guardrails:
 │   ├── up_llmd.sh                         # Deploy llm-d gateway/scheduler in front of vLLM
 │   ├── test_infer.sh                      # OpenAI chat-completions smoke test
 │   ├── run_load.sh                        # Phase 3 synthetic traffic runner
+│   ├── compare_scheduler_modes.sh         # Back-to-back scheduler behavior comparison
 │   ├── enable_imbalance.sh                # Inject replica imbalance
 │   ├── disable_imbalance.sh               # Revert imbalance
 │   ├── metrics_live.sh                    # Live per-pod runtime metrics view

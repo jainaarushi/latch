@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap bootstrap-gpu-host bootstrap-mig-layout bootstrap-k8s-gpu bootstrap-from-zero full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load enable-imbalance disable-imbalance up-latch-metrics up-latch-detector up-latch-diagnoser state incidents diagnose up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke bootstrap bootstrap-gpu-host bootstrap-mig-layout bootstrap-k8s-gpu bootstrap-from-zero full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load scheduler-compare enable-imbalance disable-imbalance up-latch-metrics up-latch-detector up-latch-diagnoser state incidents diagnose up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -20,6 +20,7 @@ help:
 	@echo "  make metrics-live - print live per-pod runtime metrics table"
 	@echo "  make metrics-live-traffic - metrics-live with built-in background traffic"
 	@echo "  make run-load - run load generator (steady/burst, mixed prompts)"
+	@echo "  make scheduler-compare - run locality-vs-diverse scheduling comparison"
 	@echo "  make enable-imbalance - inject replica imbalance incident"
 	@echo "  make disable-imbalance - revert replica imbalance incident"
 	@echo "  make up-latch-metrics - deploy latch metrics normalizer service"
@@ -96,6 +97,9 @@ metrics-live-traffic:
 
 run-load:
 	./scripts/run_load.sh
+
+scheduler-compare:
+	./scripts/compare_scheduler_modes.sh
 
 enable-imbalance:
 	./scripts/enable_imbalance.sh

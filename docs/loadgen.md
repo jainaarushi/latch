@@ -4,6 +4,7 @@ Files:
 
 - `tools/loadgen/loadgen.py`
 - `scripts/run_load.sh`
+- `scripts/compare_scheduler_modes.sh`
 
 ## Modes
 
@@ -33,3 +34,24 @@ The tool prints JSON with:
 - `ok` / `errors`
 - `latency_s` (`mean`, `p50`, `p95`, `p99`, `min`, `max`)
 - `error_breakdown`
+
+## Scheduler comparison (optimal-path validation)
+
+Run both traffic shapes back-to-back:
+
+- locality-friendly (`UNIQUE_PROMPTS=0`)
+- diverse prompts (`UNIQUE_PROMPTS=1`)
+
+Command:
+
+```bash
+NAMESPACE=kubnamespace SERVICE=infra-kubnamespace-inference-gateway-istio MODEL=tinyllama make scheduler-compare
+```
+
+The comparison prints, for each mode:
+
+- load summary (`qps`, `errors`, `p95`, `p99`)
+- per-pod `backend_proof` deltas
+- per-pod `state` snapshot (`qps`, `gpu_util`)
+
+This is for validating scheduler behavior, not fairness. Skew can be expected in locality-friendly mode.
