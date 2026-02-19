@@ -3,6 +3,7 @@ set -euo pipefail
 
 NAMESPACE=${NAMESPACE:-kubnamespace}
 RELEASE_POSTFIX=${RELEASE_POSTFIX:-${NAMESPACE}}
+REPLICAS=${REPLICAS:-3}
 
 log() {
   echo "[setup] $*"
@@ -15,7 +16,7 @@ log "Phase 0: cluster preflight"
 ./scripts/doctor.sh
 
 log "Phase 1: deploy vLLM"
-./scripts/up.sh
+REPLICAS="${REPLICAS}" ./scripts/up.sh
 
 log "Phase 1: direct infer smoke test"
 ./scripts/test_infer.sh

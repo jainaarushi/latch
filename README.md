@@ -33,6 +33,7 @@ make bootstrap-from-zero
 ```
 
 This runs host GPU bootstrap, k3s + NVIDIA device plugin setup, then LATCH stack setup.
+It also applies an A100-focused MIG layout and enforces minimum schedulable GPU capacity before deploying vLLM.
 
 Detailed notes: `docs/from_zero_bootstrap.md`
 
@@ -265,6 +266,7 @@ Guardrails:
 ├── scripts/
 │   ├── up.sh                              # Deploy vLLM replicas + service
 │   ├── bootstrap_gpu_host.sh              # Install host NVIDIA driver + container toolkit
+│   ├── bootstrap_mig_layout.sh            # Apply MIG slice layout (A100-focused defaults)
 │   ├── bootstrap_k8s_gpu.sh               # Install/configure k3s + NVIDIA device plugin
 │   ├── bootstrap_full_from_zero.sh        # Full bare-machine bootstrap wrapper
 │   ├── up_llmd.sh                         # Deploy llm-d gateway/scheduler in front of vLLM
