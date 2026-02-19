@@ -3,6 +3,8 @@ set -euo pipefail
 
 MIG_STRATEGY=${MIG_STRATEGY:-single}
 INSTALL_K3S=${INSTALL_K3S:-true}
+EXPECTED_GPU_RESOURCE_KEY=${EXPECTED_GPU_RESOURCE_KEY:-}
+EXPECTED_GPU_RESOURCE_MIN_COUNT=${EXPECTED_GPU_RESOURCE_MIN_COUNT:-3}
 
 log() {
   echo "[bootstrap-k8s-gpu] $*"
@@ -82,6 +84,39 @@ show_gpu_resources() {
   kubectl describe nodes | grep -n "nvidia.com/" || true
 }
 
+sum_resource_count() {
+  local key="$1"
+  kubectl get nodes -o go-template='{{range .items}}{{range $k,$v := .status.allocatable}}{{printf "%s=%s\n" $k $v}}{{end}}{{end}}' \
+    | awk -F= -v k="${key}" '$1==k {sum += $2} END {print sum+0}'
+}
+
+pick_detected_key() {
+  local k
+  k=$(kubectl get nodes -o go-template='{{range .items}}{{range $k,$v := .status.allocatable}}{{printf "%s=%s\n" $k $v}}{{end}}{{end}}' \
+    | awk -F= '/^nvidia.com\/mig-/ && $2 != "0" {print $1; exit}')
+  if [[ -n "${k}" ]]; then
+    echo "${k}"
+  else
+    echo "nvidia.com/gpu"
+  fi
+}
+
+assert_expected_capacity() {
+  local key="${EXPECTED_GPU_RESOURCE_KEY}"
+  if [[ -z "${key}" ]]; then
+    key=$(pick_detected_key)
+  fi
+
+  local count
+  count=$(sum_resource_count "${key}")
+  log "Capacity check: ${key}=${count} (required >= ${EXPECTED_GPU_RESOURCE_MIN_COUNT})"
+  if (( count < EXPECTED_GPU_RESOURCE_MIN_COUNT )); then
+    log "Insufficient GPU capacity for target replicas."
+    log "Adjust MIG layout or lower EXPECTED_GPU_RESOURCE_MIN_COUNT."
+    exit 1
+  fi
+}
+
 main() {
   need_sudo
   ensure_prereqs
@@ -99,6 +134,7 @@ main() {
   configure_nvidia_runtime
   install_device_plugin
   wait_for_gpu_resources
+  assert_expected_capacity
   show_gpu_resources
 
   log "Done. Kubernetes GPU stack is ready."
