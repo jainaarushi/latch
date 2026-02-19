@@ -63,10 +63,16 @@ find_profile_id() {
         for (i=1; i<=NF; i++) {
           if ($i == "MIG" && (i+2) <= NF) {
             if ($(i+1) == p && $(i+2) ~ /^[0-9]+$/) {
-              print $(i+2)
-              exit
+              if (!id) {
+                id=$(i+2)
+              }
             }
           }
+        }
+      }
+      END {
+        if (id) {
+          print id
         }
       }
     '
