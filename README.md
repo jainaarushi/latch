@@ -123,6 +123,89 @@ Expected schema:
 For detailed metric names and PromQL, see `docs/metrics.md`.
 For Phase 1 command sequence, see `docs/phase1_runbook.md`.
 
+### 6) Phase 3: Traffic generator + incident injection
+
+Run reproducible load (steady/burst, short/long prompts):
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify \
+SERVICE=infra-latchverify-inference-gateway-istio PORT=80 \
+REQUESTS=120 CONCURRENCY=12 MODE=steady MIXED_PROMPTS=true make run-load
+```
+
+Inject skewed routing (replica imbalance scenario):
+
+```bash
+NAMESPACE=latchverify make enable-imbalance
+```
+
+Revert skew and return to balanced routing:
+
+```bash
+NAMESPACE=latchverify make disable-imbalance
+```
+
+Watch normalized state while load is running:
+
+```bash
+NAMESPACE=latchverify make state
+```
+
+More details:
+- `docs/loadgen.md`
+- `docs/scenarios.md`
+
+## Repository Structure (Tools + Purpose)
+
+```text
+.
+├── Makefile                              # One-command entrypoints for all phases
+├── scripts/
+│   ├── bootstrap_prereqs.sh              # Installs kubectl/helm/jq/curl and basic prereqs
+│   ├── doctor.sh                         # Cluster preflight (context, nodes, GPU/MIG, plugins)
+│   ├── up.sh                             # Deploys vLLM replicas + service
+│   ├── test_infer.sh                     # OpenAI /v1/chat/completions smoke test
+│   ├── up_llmd.sh                        # Deploys llm-d gateway/scheduler in front of vLLM
+│   ├── backend_proof.sh                  # Shows per-pod request counter deltas via llm-d path
+│   ├── mig_check.sh                      # Prints MIG/GPU device binding per vLLM pod
+│   ├── metrics_live.sh                   # Live per-pod table (vLLM + GPU metrics)
+│   ├── up_latch_metrics.sh               # Deploys latch-metrics /state normalizer service
+│   ├── state.sh                          # Fetches normalized cluster state JSON
+│   ├── run_load.sh                       # Wrapper to run Phase 3 load generator
+│   ├── enable_imbalance.sh               # Applies route skew to create replica imbalance
+│   ├── disable_imbalance.sh              # Removes route skew and restores baseline
+│   ├── status.sh                         # Fast namespace status view (pods/svc/routes)
+│   ├── logs_routing.sh                   # Tails gateway/scheduler/vLLM routing logs
+│   ├── down.sh                           # Removes deployed demo resources
+│   └── full_setup.sh                     # Bootstrap + doctor + deploy + smoke flow
+├── deploy/
+│   ├── vllm/deployment.yaml              # vLLM Deployment/Service manifest
+│   ├── llmd/
+│   │   ├── infra-values.yaml             # llm-d infra chart values
+│   │   ├── gaie-values.yaml              # llm-d scheduling/runtime values
+│   │   └── httproute.yaml                # HTTPRoute wiring to llm-d gateway
+│   ├── observability/
+│   │   ├── prometheus.yaml               # Prometheus scrape setup for runtime metrics
+│   │   └── dcgm-exporter.yaml            # NVIDIA GPU exporter deployment
+│   ├── latch-metrics/deployment.yaml     # latch-metrics service deployment
+│   └── scenarios/imbalance.yaml          # Phase 3 route-weight imbalance scenario
+├── services/latch-metrics/
+│   ├── main.py                           # Normalizer API exposing GET /state
+│   ├── Dockerfile                        # Container build for latch-metrics
+│   └── requirements.txt                  # Python deps for latch-metrics service
+├── tools/loadgen/loadgen.py              # Synthetic traffic engine (steady/burst/mixed prompts)
+├── docs/
+│   ├── phase1_runbook.md                 # Official command sequence for Phase 1
+│   ├── metrics.md                        # Metric names, semantics, and PromQL
+│   ├── loadgen.md                        # Load generator usage and examples
+│   ├── scenarios.md                      # Incident injection workflow and expected behavior
+│   └── arch.md                           # Minimal architecture wiring for vLLM + llm-d
+└── demo-2/
+    ├── scripts/                          # GPU-machine bootstrap helpers (A10/A100 style setup)
+    ├── profiles/                         # JSON traffic profiles for in-cluster tests
+    └── README.md                         # Demo-2 machine-focused setup notes
+```
+
 
 ## Longer-Term Product Diagram (Not MVP)
 
