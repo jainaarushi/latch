@@ -43,12 +43,18 @@ def tokenish_text(token_count: int) -> str:
     return " ".join(["token"] * token_count)
 
 
-def request_once(url: str, model: str, timeout_s: float, max_tokens: int, user_tokens: int) -> Result:
+def request_once(
+    url: str,
+    model: str,
+    timeout_s: float,
+    max_tokens: int,
+    user_content: str,
+) -> Result:
     payload = {
         "model": model,
         "messages": [
             {"role": "system", "content": "You are concise."},
-            {"role": "user", "content": tokenish_text(user_tokens) or "say hello"},
+            {"role": "user", "content": user_content},
         ],
         "max_tokens": max_tokens,
         "temperature": 0,
@@ -57,7 +63,11 @@ def request_once(url: str, model: str, timeout_s: float, max_tokens: int, user_t
     req = urllib.request.Request(
         url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            # Avoid long-lived client connections that can hide per-request balancing.
+            "Connection": "close",
+        },
         method="POST",
     )
     start = time.monotonic()
@@ -127,6 +137,13 @@ def run_load(args: argparse.Namespace) -> dict:
             return args.long_user_tokens
         return args.short_user_tokens
 
+    def build_user_content(req_id: int) -> str:
+        user_tokens = pick_user_tokens()
+        base = tokenish_text(user_tokens) or "say hello"
+        if not args.unique_prompts:
+            return base
+        return f"req_id={req_id} nonce={rng.getrandbits(32)} {base}"
+
     def effective_rps(now: float) -> float:
         if args.mode == "steady":
             return args.steady_rps
@@ -138,6 +155,7 @@ def run_load(args: argparse.Namespace) -> dict:
 
     with cf.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         next_send = start
+        req_id = 0
         while True:
             now = time.monotonic()
             if now >= end:
@@ -157,8 +175,9 @@ def run_load(args: argparse.Namespace) -> dict:
                     args.model,
                     args.timeout_s,
                     args.max_tokens,
-                    pick_user_tokens(),
+                    build_user_content(req_id),
                 )
+                req_id += 1
                 futures.add(fut)
                 next_send = max(next_send + send_interval, now)
             else:
@@ -188,6 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-tokens", type=int, default=32)
     p.add_argument("--timeout-s", type=float, default=120.0)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--unique-prompts", action="store_true")
     return p
 
 
