@@ -84,12 +84,20 @@ body {
   border: 1px solid #eee7db;
   border-radius: 10px;
   padding: 8px;
+  height: 220px;
+  overflow: hidden;
 }
 
 .chart-title {
   margin: 0 0 6px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.chart-wrap canvas {
+  width: 100% !important;
+  height: 180px !important;
+  display: block;
 }
 
 .list {
