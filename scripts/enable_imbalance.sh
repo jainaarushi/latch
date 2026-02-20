@@ -21,8 +21,8 @@ fi
 echo "[scenario] Enabling replica imbalance..."
 
 mapfile -t pods < <(kubectl -n "${NAMESPACE}" get pods -l "${SELECTOR}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | sort)
-if [[ ${#pods[@]} -lt 3 ]]; then
-  echo "[scenario] Need at least 3 vLLM pods; found ${#pods[@]}"
+if [[ ${#pods[@]} -lt 2 ]]; then
+  echo "[scenario] Need at least 2 vLLM pods; found ${#pods[@]}"
   exit 1
 fi
 

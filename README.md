@@ -222,6 +222,7 @@ make demo-incident
 More details:
 - `docs/loadgen.md`
 - `docs/scenarios.md`
+- `docs/ui.md`
 
 ### 7) Phase 4/7: Deterministic detection (`/incidents`)
 
@@ -311,6 +312,30 @@ Guardrails:
 - includes `Sources` referencing evidence field names
 - details in `docs/safety.md`
 
+### 9) Minimal Dashboard + One-command demo
+
+Deploy API gateway + UI:
+
+```bash
+NAMESPACE=latchverify make up-latch-api-gateway
+NAMESPACE=latchverify make up-latch-ui
+kubectl -n latchverify port-forward svc/latch-ui 18088:8088
+```
+
+Open `http://127.0.0.1:18088` to view:
+- live metrics charts
+- incidents list
+- diagnosis markdown
+- Apply Fix / Rollback actions
+
+Run full reproducible demo with before/after report:
+
+```bash
+NAMESPACE=latchverify RELEASE_POSTFIX=latchverify \
+SERVICE=infra-latchverify-inference-gateway-istio MODEL=tinyllama \
+make run-demo
+```
+
 ## Important File Structure (Quick Map)
 
 ```text
@@ -328,6 +353,8 @@ Guardrails:
 │   ├── compare_scheduler_modes.sh         # Back-to-back scheduler behavior comparison
 │   ├── state_live.sh                      # Repeated /state polling to JSONL timeline
 │   ├── demo_incident.sh                   # One-command baseline/skew/detect/diagnose run
+│   ├── up_latch_api_gateway.sh            # Deploy API aggregator and fix endpoints
+│   ├── up_latch_ui.sh                     # Deploy minimal dashboard UI
 │   ├── enable_imbalance.sh                # Inject replica imbalance
 │   ├── disable_imbalance.sh               # Revert imbalance
 │   ├── metrics_live.sh                    # Live per-pod runtime metrics view
@@ -343,7 +370,10 @@ Guardrails:
 │   ├── scenarios/imbalance.yaml           # Route-weight skew scenario manifest
 │   ├── latch-detector/deployment.yaml     # Latch detector deployment/service
 │   └── latch-diagnoser/deployment.yaml    # Latch diagnoser deployment/service
+│   ├── latch-api-gateway/deployment.yaml  # API gateway deployment/RBAC/service
+│   └── ui/deployment.yaml                 # Dashboard deployment/service
 ├── services/latch-metrics/main.py         # Normalized cluster-state API implementation
+├── services/latch-api-gateway/main.py     # UI-facing API + fix/rollback actions
 ├── services/latch-detector/
 │   ├── main.py                            # Deterministic incident detector API
 │   └── rules.yaml                         # Rule thresholds (AI-ready swap point)
@@ -352,12 +382,14 @@ Guardrails:
 │   ├── llm_summarizer.py                  # deterministic|llm narrative mode with safe fallback
 │   └── templates/imbalance.md             # Human-readable diagnosis template
 ├── tools/loadgen/loadgen.py               # Load generation engine (steady/burst/mixed prompts)
+├── ui/                                    # Minimal dashboard static React assets
 └── docs/
     ├── phase1_runbook.md                  # Verified Phase 1 command sequence
     ├── metrics.md                         # Metrics definitions and PromQL
     ├── loadgen.md                         # Load generator usage
     ├── scenarios.md                       # Incident scenario workflow
     ├── detector.md                        # Detector rule tuning guide
+    ├── ui.md                              # Dashboard and gateway usage
     ├── safety.md                          # Guardrails for diagnosis narrative
     └── from_zero_bootstrap.md             # Bare-host bootstrap instructions
 ```
