@@ -1,0 +1,184 @@
+:root {
+  --bg: #f3efe7;
+  --panel: #fffdf8;
+  --ink: #1e1d1a;
+  --muted: #6d6a5f;
+  --accent: #0f766e;
+  --warn: #b45309;
+  --bad: #b91c1c;
+  --ok: #15803d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 20% 0%, #fff7e6, var(--bg) 50%);
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid #e7e2d8;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.charts {
+  grid-column: span 8;
+}
+
+.incidents {
+  grid-column: span 4;
+}
+
+.diagnosis {
+  grid-column: span 8;
+}
+
+.actions {
+  grid-column: span 4;
+}
+
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.chart-wrap {
+  border: 1px solid #eee7db;
+  border-radius: 10px;
+  padding: 8px;
+  height: 220px;
+  overflow: hidden;
+}
+
+.chart-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chart-wrap canvas {
+  width: 100% !important;
+  height: 180px !important;
+  display: block;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.incident {
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #ece6dc;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.incident.active {
+  border-color: var(--accent);
+  background: #ecfffc;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: white;
+}
+
+.pill.ok {
+  background: var(--ok);
+}
+
+.pill.warn {
+  background: var(--warn);
+}
+
+.pill.bad {
+  background: var(--bad);
+}
+
+button {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+button.apply {
+  background: var(--ok);
+  color: #fff;
+}
+
+button.rollback {
+  background: var(--warn);
+  color: #fff;
+}
+
+button.refresh {
+  background: var(--accent);
+  color: #fff;
+}
+
+.status {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.markdown {
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .charts,
+  .incidents,
+  .diagnosis,
+  .actions {
+    grid-column: span 12;
+  }
+}
