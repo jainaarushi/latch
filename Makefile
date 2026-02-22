@@ -1,4 +1,4 @@
-.PHONY: help all check demo smoke bootstrap bootstrap-gpu-host bootstrap-mig-layout bootstrap-k8s-gpu bootstrap-from-zero full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load scheduler-compare state-live demo-incident run-demo up-latch-api-gateway up-latch-ui enable-imbalance disable-imbalance up-latch-metrics up-latch-detector up-latch-diagnoser state incidents diagnose up up-vllm up-llmd test-infer doctor status down logs-routing
+.PHONY: help all check demo smoke dashboard bootstrap bootstrap-gpu-host bootstrap-mig-layout bootstrap-k8s-gpu bootstrap-from-zero full-setup demo-phase1 mig-check backend-proof metrics-live metrics-live-traffic run-load scheduler-compare state-live demo-incident run-demo up-latch-api-gateway up-latch-ui enable-imbalance disable-imbalance up-latch-metrics up-latch-detector up-latch-diagnoser state incidents diagnose up up-vllm up-llmd test-infer doctor status down logs-routing
 
 PY ?= python3
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -8,6 +8,7 @@ help:
 	@echo "  make check   - run fast verification (scripts/dev_check.sh)"
 	@echo "  make smoke   - run minimal SDK smoke demo"
 	@echo "  make demo    - run the traffic-control demo"
+	@echo "  make dashboard - run local dashboard for demo logs (port 8080)"
 	@echo "  make bootstrap - install required CLI tools (kubectl, helm, curl, jq)"
 	@echo "  make bootstrap-gpu-host - install NVIDIA driver + container toolkit on host"
 	@echo "  make bootstrap-mig-layout - apply MIG layout (A100-focused defaults)"
@@ -52,6 +53,9 @@ smoke:
 
 demo:
 	$(PY) demo/run_demo.py
+
+dashboard:
+	$(PY) -m uvicorn demo.dashboard:app --host 0.0.0.0 --port 8080
 
 bootstrap:
 	./scripts/bootstrap_prereqs.sh
